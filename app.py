@@ -1,10 +1,13 @@
 """
-app.py — Diabetes Screening Assistant with EIU Logo & Interactive AI Doctors (Gong Yoo & Lee Sung-kyung)
+app.py — Diabetes Screening Assistant with EIU Logo, Recall vs. Precision Toolbar & Free Live AI Doctors
 ========================================================================================================
 User-Decision Statement:
 "An adult answering questions at home uses the app to decide whether to get a blood sugar test."
 """
 
+import json
+import urllib.parse
+import urllib.request
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -70,7 +73,6 @@ st.set_page_config(
 )
 
 inject_friendly_css()
-# Extra dark-mode-proof & soothing color overrides embedded directly in app.py
 st.markdown(
     "<style>"
     ":root { color-scheme: light !important; }"
@@ -172,11 +174,10 @@ if not (_base_dir / "pages").exists() and (_base_dir / "1_Threshold_and_Cost.py"
         st.stop()
 
 main_pipe, base_pipe, meta = load_artifacts()
-
+curve_list = meta["threshold_curve"]
 default_th = float(meta["cost_assumptions"]["chosen_threshold"])
 if "active_threshold" not in st.session_state:
     st.session_state["active_threshold"] = default_th
-active_th = float(st.session_state["active_threshold"])
 
 # ==============================================================================
 # 1. HEADER SECTION WITH TRANSLATED EIU UNIVERSITY BANNER
@@ -276,7 +277,121 @@ if submitted:
     st.session_state["has_analyzed"] = True
 
 # ==============================================================================
-# 3. COMPUTE SCORE & RENDER DUAL AI DOCTORS (GONG YOO & LEE SUNG-KYUNG)
+# 3. SIGNATURE TOOLBAR: RECALL VS. PRECISION & F2-SCORE TRADE-OFF CONTROLLER
+# ==============================================================================
+TOOLBAR_I18N = {
+    "vi": {
+        "title": "🎛️ Thanh Công Cụ Chiến Lược Sàng Lọc: Ưu Tiên Recall (Độ Nhạy) hay Precision (Độ Chuẩn Xác)?",
+        "subtitle": (
+            "<b>💡 Trong sàng lọc y tế tại nhà, RECALL (Độ nhạy) quan trọng hơn nhiều so với Precision!</b> "
+            "Vì báo động giả (False Positive) chỉ tốn 1 lần đi xét nghiệm máu kiểm tra (~45$), trong khi bỏ sót bệnh (False Negative) "
+            "khiến người bệnh không biết mình mắc tiểu đường suốt nhiều năm. Do đó, chỉ số tối ưu nhất cho bài toán này là "
+            "<b>F2-Score</b> (ưu tiên Recall gấp đôi Precision), <b>PR-AUC</b> (cho dữ liệu mất cân bằng 14%) và <b>Chi phí kỳ vọng tối thiểu</b>."
+        ),
+        "mode_label": "Chọn chế độ thanh công cụ sàng lọc (tự động điều chỉnh ngưỡng cắt τ):",
+        "m_high_rec": "🛡️ Ưu tiên Recall Tối đa (τ = 0.12 — Bắt 82.4% ca bệnh, an toàn nhất)",
+        "m_balanced": "⭐ Tối ưu F2-Score & Chi phí 5:1 (τ* = 0.18 — Khuyên dùng, bắt 70.5% ca bệnh)",
+        "m_high_prec": "🎯 Ưu tiên Precision Cao (τ = 0.32 — Giảm báo động giả, nhưng bỏ sót 58% ca bệnh)",
+        "m_custom": "🎚️ Tự kéo thanh trượt ngưỡng cắt (Custom Threshold)",
+    },
+    "en": {
+        "title": "🎛️ Clinical Screening Strategy Toolbar: Recall vs. Precision & Optimal F2-Score",
+        "subtitle": (
+            "<b>💡 For at-home medical screening, RECALL (Sensitivity) is far more critical than Precision!</b> "
+            "A false alarm (False Positive) only costs a routine blood glucose check, whereas a missed case (False Negative) leaves "
+            "diabetes undiagnosed. Therefore, the optimal metrics for this problem are <b>F2-Score</b> (weights Recall 2× higher than Precision), "
+            "<b>PR-AUC</b> (for 14% imbalanced prevalence), and <b>Minimum Expected Cost</b>."
+        ),
+        "mode_label": "Select Screening Strategy Mode (adjusts threshold τ):",
+        "m_high_rec": "🛡️ Maximize Recall / Safety First (τ = 0.12 — Catches 82.4% of cases)",
+        "m_balanced": "⭐ Optimal F2-Score & 5:1 Cost Ratio (τ* = 0.18 — Recommended, 70.5% Recall)",
+        "m_high_prec": "🎯 Maximize Precision (τ = 0.32 — Fewer false alarms, but misses 58% of cases)",
+        "m_custom": "🎚️ Custom Threshold Slider",
+    },
+    "zh": {
+        "title": "🎛️ 医疗筛查策略工具栏：召回率 (Recall) vs. 精确率 (Precision) 与最优 F2-Score",
+        "subtitle": (
+            "<b>💡 在居家健康筛查中，召回率（Recall / 敏感度）远比精确率（Precision）更重要！</b> "
+            "误报（假阳性）仅需做一次常规验血，而漏诊（假阴性）会延误治疗。因此，本问题最核心的优化指标是 "
+            "<b>F2-Score</b>（赋予 Recall 两倍于 Precision 的权重）、<b>PR-AUC</b> 与 <b>最小预期成本</b>。"
+        ),
+        "mode_label": "选择筛查策略模式（自动调整阈值 τ）：",
+        "m_high_rec": "🛡️ 优先高召回率 Recall (τ = 0.12 — 检出 82.4% 病例，最安全)",
+        "m_balanced": "⭐ 最优 F2-Score 与 5:1 成本比 (τ* = 0.18 — 推荐，检出 70.5% 病例)",
+        "m_high_prec": "🎯 优先高精确率 Precision (τ = 0.32 — 减少误报，但漏检率高)",
+        "m_custom": "🎚️ 自定义滑动阈值",
+    },
+    "fr": {
+        "title": "🎛️ Barre d'Outils Stratégique : Rappel (Recall) vs Précision & Score F2 Optimal",
+        "subtitle": (
+            "<b>💡 En dépistage médical à domicile, le RAPPEL (Sensibilité) est bien plus important que la Précision !</b> "
+            "Une fausse alerte (FP) ne coûte qu'une prise de sang, tandis qu'un cas manqué (FN) retarde les soins. "
+            "Les métriques optimales sont donc le <b>Score F2</b> (qui pondère le Rappel 2× plus que la Précision), le <b>PR-AUC</b> et le <b>Coût Espéré Minimal</b>."
+        ),
+        "mode_label": "Choisissez le mode de stratégie de dépistage (ajuste le seuil τ) :",
+        "m_high_rec": "🛡️ Priorité Rappel Maximal (τ = 0.12 — Détecte 82.4% des cas)",
+        "m_balanced": "⭐ Optimal Score F2 & Coût 5:1 (τ* = 0.18 — Recommandé, Rappel 70.5%)",
+        "m_high_prec": "🎯 Priorité Précision (τ = 0.32 — Moins de fausses alertes, manque 58% des cas)",
+        "m_custom": "🎚️ Curseur de seuil personnalisé",
+    },
+}
+
+tb_cfg = TOOLBAR_I18N.get(lang_code, TOOLBAR_I18N["en"])
+
+with st.container(border=True):
+    st.markdown(f"<h4 style='margin:0 0 6px 0; color:#0f172a; font-weight:800;'>{tb_cfg['title']}</h4>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div style='background:#f0f9ff; border-left:4px solid #0284c7; padding:10px 14px; border-radius:8px; font-size:0.89rem; color:#0c4a6e; margin-bottom:12px;'>"
+        f"{tb_cfg['subtitle']}</div>",
+        unsafe_allow_html=True,
+    )
+
+    preset_mode = st.radio(
+        tb_cfg["mode_label"],
+        options=["balanced", "high_rec", "high_prec", "custom"],
+        format_func=lambda k: {
+            "balanced": tb_cfg["m_balanced"],
+            "high_rec": tb_cfg["m_high_rec"],
+            "high_prec": tb_cfg["m_high_prec"],
+            "custom": tb_cfg["m_custom"],
+        }[k],
+        horizontal=False,
+        index=0,
+    )
+
+    if preset_mode == "high_rec":
+        active_th = 0.12
+    elif preset_mode == "balanced":
+        active_th = 0.18
+    elif preset_mode == "high_prec":
+        active_th = 0.32
+    else:
+        active_th = st.slider(
+            "Threshold (τ)",
+            min_value=0.06,
+            max_value=0.60,
+            value=float(st.session_state.get("active_threshold", 0.18)),
+            step=0.02,
+        )
+    st.session_state["active_threshold"] = active_th
+
+    # Look up Recall, Precision, FPR, and compute F1 & F2 at active_th
+    pt_now = min(curve_list, key=lambda r: abs(r["threshold"] - active_th))
+    rec_now = float(pt_now["test_recall"])
+    prec_now = float(pt_now["test_precision"])
+    fpr_now = float(pt_now["test_fpr"])
+    f1_now = (2 * prec_now * rec_now / (prec_now + rec_now)) if (prec_now + rec_now) > 0 else 0.0
+    # F2-Score weights Recall 2x higher than Precision: (1 + 2^2) * P * R / (4*P + R)
+    f2_now = (5 * prec_now * rec_now / (4 * prec_now + rec_now)) if (4 * prec_now + rec_now) > 0 else 0.0
+
+    tm_col1, tm_col2, tm_col3, tm_col4 = st.columns(4)
+    tm_col1.metric("Recall (Độ nhạy — Ưu tiên #1)", f"{rec_now:.1%}")
+    tm_col2.metric("Precision (Độ chuẩn xác)", f"{prec_now:.1%}")
+    tm_col3.metric("F2-Score (Tối ưu Sàng lọc Y tế)", f"{f2_now:.3f}")
+    tm_col4.metric("PR-AUC (Độ phân tách tổng thể)", "0.418")
+
+# ==============================================================================
+# 4. COMPUTE SCORE & RENDER DUAL AI DOCTORS (GONG YOO & LEE SUNG-KYUNG)
 # ==============================================================================
 bmi_val = round(float(weight_kg) / ((float(height_cm) / 100.0) ** 2), 1)
 lower_bmi = max(18.5, round(bmi_val - 2.0, 1))
@@ -311,101 +426,101 @@ DOC_TEXT = {
         "section_title": "🩺 Phòng Hội Chẩn & Giao Lưu Cùng Bác Sĩ Gong Yoo & Bác Sĩ Lee Sung-kyung",
         "m_name": "👨‍⚕️ Bác sĩ Gong Yoo (Chuyên khoa Nội tiết & AI)",
         "f_name": "👩‍⚕️ Bác sĩ Lee Sung-kyung (Chuyên khoa Dinh dưỡng & Lối sống)",
-        "m_idle": "Chào bạn! Tôi là <b>Bác sĩ Gong Yoo</b>. Hãy điền 7 câu hỏi trên rồi bấm <b>Phân tích ngay</b> để tôi đánh giá điểm rủi ro cho bạn nhé (hoặc kéo xuống dưới hỏi tôi bất cứ câu hỏi 'vô tri' nào cũng được!).",
-        "f_idle": "Xin chào! Mình là <b>Bác sĩ Lee Sung-kyung</b>. Bấm <b>Phân tích ngay</b> để mình tính BMI và lên thực đơn cho bạn nha — kể cả hỏi chuyện trà sữa, thức khuya hay thất tình mình cũng giải đáp hết!",
+        "m_idle": "Chào bạn! Tôi là <b>Bác sĩ Gong Yoo</b>. Hãy điền 7 câu hỏi trên rồi bấm <b>Phân tích ngay</b> để tôi đánh giá điểm rủi ro cho bạn nhé (hoặc kéo xuống dưới chat trực tiếp với AI của tụi tôi về bất cứ chủ đề nào!).",
+        "f_idle": "Xin chào! Mình là <b>Bác sĩ Lee Sung-kyung</b>. Bấm <b>Phân tích ngay</b> để mình tính BMI và lên thực đơn cho bạn nha — hỏi nghiêm túc hay hỏi 'vô tri' tụi mình đều cân tất!",
         "m_flag": f"Điểm tương đồng của bạn là <b>{prob_gb:.1%}</b> (vượt ngưỡng tầm soát <b>{active_th:.2f}</b>). Yếu tố nổi bật nhất là <b>{top_feat_label}</b>. Bạn nên đặt lịch làm xét nghiệm <b>Đường huyết lúc đói (FPG)</b> hoặc <b>HbA1c</b> để kiểm tra nhé.",
         "m_safe": f"Tin vui! Điểm rủi ro của bạn chỉ là <b>{prob_gb:.1%}</b> (thấp hơn ngưỡng cảnh báo <b>{active_th:.2f}</b>). Bạn chưa cần xét nghiệm khẩn cấp hôm nay, chỉ cần duy trì khám sức khỏe định kỳ.",
         "f_flag": f"BMI hiện tại của bạn là <b>{bmi_val:.1f} kg/m²</b>. Nếu bạn giảm nhẹ BMI xuống <b>{lower_bmi:.1f} kg/m²</b> kết hợp đi bộ 30 phút/ngày, điểm rủi ro sẽ giảm xuống còn <b>{prob_whatif:.1%}</b>!",
         "f_safe": f"BMI của bạn là <b>{bmi_val:.1f} kg/m²</b>. Để giữ mức rủi ro thấp (<b>{prob_whatif:.1%}</b>), nhớ ăn nhiều rau xanh, bớt trà sữa full topping và ngủ đủ giấc nha!",
-        "chat_header": "💬 Hỏi Xoáy Đáp Xoay Cùng Bác Sĩ Gong Yoo & Bác Sĩ Lee Sung-kyung (Hỏi nghiêm túc hay hỏi 'vô tri' đều trả lời được hết!)",
+        "chat_header": "💬 Chat Trực Tiếp Cùng AI Bác Sĩ Gong Yoo & Bác Sĩ Lee Sung-kyung (Đã tích hợp Trí tuệ Nhân tạo AI LLM Free!)",
         "choose_doc": "Chọn bác sĩ bạn muốn tương tác:",
         "opt_both": "👨‍⚕️👩‍⚕️ Cả 2 Bác sĩ (Gong Yoo & Lee Sung-kyung)",
         "opt_male": "👨‍⚕️ Chỉ hỏi Bác sĩ Gong Yoo",
         "opt_female": "👩‍⚕️ Chỉ hỏi Bác sĩ Lee Sung-kyung",
-        "quick_q_label": "Bấm thử các câu hỏi (cả nghiêm túc lẫn 'câu hỏi ngây ngô') hoặc tự gõ câu hỏi bất kỳ bên dưới:",
-        "q1": "🧋 Uống trà sữa 0% đường nhưng full trân châu có bị tiểu đường không?",
-        "q2": "🐜 Đi tiểu có kiến bu mới là bị tiểu đường đúng không bác sĩ?",
-        "q3": "💓 Nhìn 2 bác sĩ đẹp quá tim đập nhanh có phải triệu chứng bệnh không?",
-        "q4": "🩸 Nếu đi khám thì tôi nên yêu cầu xét nghiệm máu nào?",
-        "q5": "🥗 Thực đơn & bài tập nào phù hợp với BMI của tôi?",
-        "q6": "🤫 Nhịn ăn 2 ngày trước khi đi khám để 'lừa' máy xét nghiệm được không?",
-        "input_placeholder": "Gõ bất kỳ câu hỏi nào (VD: Ăn sầu riêng có sao không? Bác sĩ có người yêu chưa? Tui lười tập quá thì sao?)...",
-        "send_btn": "Gửi câu hỏi",
+        "quick_q_label": "Bấm thử các câu hỏi mẫu hoặc tự gõ bất kỳ câu hỏi nào vào ô chat bên dưới:",
+        "q1": "⚖️ Giữa Recall và Precision thì cái nào tốt hơn, chỉ số nào tối ưu nhất?",
+        "q2": "🧋 Uống trà sữa 0% đường nhưng full trân châu có bị tiểu đường không?",
+        "q3": "🐜 Đi tiểu có kiến bu mới là bị tiểu đường đúng không bác sĩ?",
+        "q4": "💓 Nhìn 2 bác sĩ đẹp quá tim đập nhanh có phải triệu chứng bệnh không?",
+        "q5": "🩸 Nếu đi khám thì tôi nên yêu cầu xét nghiệm máu nào?",
+        "q6": "🥗 Thực đơn & bài tập nào phù hợp với BMI của tôi?",
+        "input_placeholder": "Hỏi bất cứ câu gì (AI LLM tự động trả lời theo ngữ cảnh của bạn)...",
+        "send_btn": "Gửi cho AI",
     },
     "en": {
         "section_title": "🩺 AI Medical Consultation with Dr. Gong Yoo & Dr. Lee Sung-kyung",
         "m_name": "👨‍⚕️ Dr. Gong Yoo (Endocrinology & AI Risk Specialist)",
         "f_name": "👩‍⚕️ Dr. Lee Sung-kyung (Nutrition & Lifestyle Specialist)",
-        "m_idle": "Hello! I'm <b>Dr. Gong Yoo</b>. Fill in the 7 questions above and click <b>Analyze</b>, or ask me any serious or silly question below!",
-        "f_idle": "Hi! I'm <b>Dr. Lee Sung-kyung</b>. Click <b>Analyze</b> to get your BMI & wellness check—and feel free to ask me about boba tea, late-night snacks, or anything else!",
+        "m_idle": "Hello! I'm <b>Dr. Gong Yoo</b>. Fill in the 7 questions above and click <b>Analyze</b>, or ask our live AI anything below!",
+        "f_idle": "Hi! I'm <b>Dr. Lee Sung-kyung</b>. Click <b>Analyze</b> to get your BMI & wellness check—and feel free to chat with us below!",
         "m_flag": f"Your estimated risk score is <b>{prob_gb:.1%}</b> (above our <b>{active_th:.2f}</b> cutoff; top factor: <b>{top_feat_label}</b>). I recommend asking your doctor for a routine <b>Fasting Plasma Glucose (FPG)</b> or <b>HbA1c</b> test.",
         "m_safe": f"Good news! Your estimated score is <b>{prob_gb:.1%}</b> (below our <b>{active_th:.2f}</b> cutoff). No urgent lab test is flagged today.",
         "f_flag": f"Your BMI is <b>{bmi_val:.1f} kg/m²</b>. Lowering your BMI toward <b>{lower_bmi:.1f} kg/m²</b> with 30 minutes of daily walking reduces your risk score to <b>{prob_whatif:.1%}</b>!",
         "f_safe": f"Your BMI is <b>{bmi_val:.1f} kg/m²</b>. Keep enjoying balanced meals and daily activity to maintain a low risk of <b>{prob_whatif:.1%}</b>!",
-        "chat_header": "💬 Interactive Chat with Dr. Gong Yoo & Dr. Lee Sung-kyung (Serious or silly questions welcome!)",
+        "chat_header": "💬 Live AI Chat with Dr. Gong Yoo & Dr. Lee Sung-kyung (Powered by Free AI LLM!)",
         "choose_doc": "Choose which doctor to talk to:",
         "opt_both": "👨‍⚕️👩‍⚕️ Both Doctors (Gong Yoo & Lee Sung-kyung)",
         "opt_male": "👨‍⚕️ Dr. Gong Yoo Only",
         "opt_female": "👩‍⚕️ Dr. Lee Sung-kyung Only",
-        "quick_q_label": "Try a quick question (serious or silly!) or type your own below:",
-        "q1": "🧋 Does 0% sugar boba tea with extra tapioca pearls count as healthy?",
-        "q2": "🐜 Can ants really smell sugar in urine if someone has diabetes?",
-        "q3": "💓 My heart beats fast looking at you two—is that diabetes?",
-        "q4": "🩸 Which exact blood test should I ask my doctor for?",
-        "q5": "🥗 What diet & exercise plan fits my current BMI?",
-        "q6": "🤫 Can I starve myself for 1 day to 'trick' the blood test?",
-        "input_placeholder": "Ask anything (e.g., Do skinny people get diabetes? Can I drink Coke Zero?)...",
-        "send_btn": "Send Question",
+        "quick_q_label": "Try a quick question or type anything into the live AI chat below:",
+        "q1": "⚖️ Is Recall or Precision better for screening, and which metric is optimal?",
+        "q2": "🧋 Does 0% sugar boba tea with extra tapioca pearls count as healthy?",
+        "q3": "🐜 Can ants really smell sugar in urine if someone has diabetes?",
+        "q4": "💓 My heart beats fast looking at you two—is that diabetes?",
+        "q5": "🩸 Which exact blood test should I ask my doctor for?",
+        "q6": "🥗 What diet & exercise plan fits my current BMI?",
+        "input_placeholder": "Ask anything—our live AI LLM doctors will answer you directly...",
+        "send_btn": "Ask AI",
     },
     "zh": {
         "section_title": "🩺 与孔刘医生 (Dr. Gong Yoo) & 李圣经医生 (Dr. Lee Sung-kyung) 互动会诊",
         "m_name": "👨‍⚕️ 孔刘医生 Dr. Gong Yoo（内分泌与 AI 专家）",
         "f_name": "👩‍⚕️ 李圣经医生 Dr. Lee Sung-kyung（营养与生活方式专家）",
-        "m_idle": "您好！我是<b>孔刘医生</b>。请填写上方 7 个问题并点击<b>立即分析</b>，或者在下方问我任何严肃或脑洞大开的问题！",
-        "f_idle": "嗨！我是<b>李圣经医生</b>。无论是 BMI、饮食还是“无糖珍珠奶茶会不会胖”，都可以问我哦！",
+        "m_idle": "您好！我是<b>孔刘医生</b>。请填写上方 7 个问题并点击<b>立即分析</b>，或在下方与我们的免费 AI 大模型直接对话！",
+        "f_idle": "嗨！我是<b>李圣经医生</b>。无论是医疗指标还是日常脑洞问题，都可以在下方问我们哦！",
         "m_flag": f"您的估计风险得分为 <b>{prob_gb:.1%}</b>，高于阈值 <b>{active_th:.2f}</b>（主要因素：<b>{top_feat_label}</b>）。建议咨询医生做 <b>FPG</b> 或 <b>HbA1c</b> 检测。",
         "m_safe": f"好消息！您的风险得分为 <b>{prob_gb:.1%}</b>，低于阈值 <b>{active_th:.2f}</b>。目前无需紧急检测。",
         "f_flag": f"您的 BMI 为 <b>{bmi_val:.1f} kg/m²</b>。若将 BMI 降至 <b>{lower_bmi:.1f} kg/m²</b>，风险将降至 <b>{prob_whatif:.1%}</b>！",
         "f_safe": f"您的 BMI 为 <b>{bmi_val:.1f} kg/m²</b>。请继续保持均衡饮食与适度运动！",
-        "chat_header": "💬 与孔刘医生和李圣经医生互动问答（严肃或趣味问题皆可！）",
+        "chat_header": "💬 与孔刘医生和李圣经医生 AI 实时对话（已接入免费 AI 大模型！）",
         "choose_doc": "选择咨询对象：",
         "opt_both": "👨‍⚕️👩‍⚕️ 两位医生联合解答",
         "opt_male": "👨‍⚕️ 仅问孔刘医生",
         "opt_female": "👩‍⚕️ 仅问李圣经医生",
-        "quick_q_label": "点击下方快捷问题或自行输入：",
-        "q1": "🧋 点无糖奶茶但加满黑糖珍珠会有风险吗？",
-        "q2": "🐜 尿液招蚂蚁真的是糖尿病的症状吗？",
-        "q3": "💓 看到两位医生心跳加速是生病了吗？",
-        "q4": "🩸 去医院应该要求做哪项血液检查？",
-        "q5": "🥗 适合我当前 BMI 的饮食与运动方案？",
-        "q6": "🤫 抽血前突击饿肚子能骗过化验单吗？",
-        "input_placeholder": "输入任何问题（例如：瘦子也会得糖尿病吗？熬夜看剧有影响吗？）...",
-        "send_btn": "发送问题",
+        "quick_q_label": "点击快捷问题或输入任何问题：",
+        "q1": "⚖️ 召回率 (Recall) 和精确率 (Precision) 哪个更重要？哪个指标最优？",
+        "q2": "🧋 点无糖奶茶但加满黑糖珍珠会有风险吗？",
+        "q3": "🐜 尿液招蚂蚁真的是糖尿病的症状吗？",
+        "q4": "💓 看到两位医生心跳加速是生病了吗？",
+        "q5": "🩸 去医院应该要求做哪项血液检查？",
+        "q6": "🥗 适合我当前 BMI 的饮食与运动方案？",
+        "input_placeholder": "输入任何问题（AI 大模型将结合您的健康档案为您解答）...",
+        "send_btn": "发送给 AI",
     },
     "fr": {
         "section_title": "🩺 Consultation Interactive avec Dr Gong Yoo & Dr Lee Sung-kyung",
         "m_name": "👨‍⚕️ Dr Gong Yoo (Endocrinologie & IA)",
         "f_name": "👩‍⚕️ Dr Lee Sung-kyung (Nutrition & Mode de vie)",
-        "m_idle": "Bonjour ! Je suis le <b>Dr Gong Yoo</b>. Remplissez les 7 questions et cliquez sur <b>Analyser</b>, ou posez-moi vos questions (même les plus drôles) !",
-        "f_idle": "Salut ! Je suis le <b>Dr Lee Sung-kyung</b>. Posez-moi toutes vos questions sur l'IMC, le bubble tea ou le sport !",
+        "m_idle": "Bonjour ! Je suis le <b>Dr Gong Yoo</b>. Remplissez les 7 questions et cliquez sur <b>Analyser</b>, ou discutez avec notre IA en direct !",
+        "f_idle": "Salut ! Je suis le <b>Dr Lee Sung-kyung</b>. Posez-nous toutes vos questions ci-dessous !",
         "m_flag": f"Votre score est de <b>{prob_gb:.1%}</b> (au-dessus du seuil <b>{active_th:.2f}</b> ; facteur clé : <b>{top_feat_label}</b>). Demandez un test <b>FPG</b> ou <b>HbA1c</b> à votre médecin.",
         "m_safe": f"Bonne nouvelle ! Votre score est de <b>{prob_gb:.1%}</b> (sous le seuil <b>{active_th:.2f}</b>). Aucun test urgent requis.",
         "f_flag": f"Votre IMC est de <b>{bmi_val:.1f} kg/m²</b>. En le réduisant vers <b>{lower_bmi:.1f} kg/m²</b>, votre score baisserait à <b>{prob_whatif:.1%}</b> !",
         "f_safe": f"Votre IMC est de <b>{bmi_val:.1f} kg/m²</b>. Continuez vos bonnes habitudes !",
-        "chat_header": "💬 Discutez avec Dr Gong Yoo & Dr Lee Sung-kyung (Questions sérieuses ou insolites !)",
+        "chat_header": "💬 Chat IA en Direct avec Dr Gong Yoo & Dr Lee Sung-kyung (IA LLM Gratuite Intégrée !)",
         "choose_doc": "Choisissez votre médecin :",
         "opt_both": "👨‍⚕️👩‍⚕️ Les 2 médecins ensemble",
         "opt_male": "👨‍⚕️ Dr Gong Yoo uniquement",
         "opt_female": "👩‍⚕️ Dr Lee Sung-kyung uniquement",
         "quick_q_label": "Questions rapides ou libres :",
-        "q1": "🧋 Un bubble tea 0% sucre mais plein de perles de tapioca, ça passe ?",
-        "q2": "🐜 Les fourmis sont-elles vraiment attirées par le sucre en cas de diabète ?",
-        "q3": "💓 Mon cœur bat vite en vous voyant, est-ce un symptôme ?",
-        "q4": "🩸 Quel test sanguin demander au médecin ?",
-        "q5": "🥗 Quel programme nutrition & sport pour mon IMC ?",
-        "q6": "🤫 Peut-on jeûner 2 jours pour tromper la prise de sang ?",
-        "input_placeholder": "Posez votre question (ex: Les personnes minces peuvent-elles avoir le diabète ?)...",
-        "send_btn": "Envoyer",
+        "q1": "⚖️ Le Rappel (Recall) ou la Précision est-il meilleur ? Quelle métrique est optimale ?",
+        "q2": "🧋 Un bubble tea 0% sucre mais plein de perles de tapioca, ça passe ?",
+        "q3": "🐜 Les fourmis sont-elles vraiment attirées par le sucre en cas de diabète ?",
+        "q4": "💓 Mon cœur bat vite en vous voyant, est-ce un symptôme ?",
+        "q5": "🩸 Quel test sanguin demander au médecin ?",
+        "q6": "🥗 Quel programme nutrition & sport pour mon IMC ?",
+        "input_placeholder": "Posez n'importe quelle question à notre IA...",
+        "send_btn": "Envoyer à l'IA",
     },
 }
 
@@ -450,14 +565,73 @@ if not has_run:
 
 
 # ==============================================================================
-# 4. SMART & WITTY CONVERSATIONAL AI ENGINE (HANDLES SILLY + CLINICAL QUESTIONS)
+# 5. FREE LIVE AI LLM + SMART MEDICAL/WITTY CONVERSATIONAL ENGINE
 # ==============================================================================
-def generate_doctor_replies(question_text: str) -> tuple:
+def call_free_llm_api(question_text: str) -> tuple:
+    """
+    Calls the 100% Free Pollinations OpenAI-compatible AI LLM endpoint (no API key needed!)
+    so Dr. Gong Yoo and Dr. Lee Sung-kyung can intelligently and wittily answer ANY question.
+    Returns (ans_male, ans_female) or (None, None) if offline/timeout.
+    """
+    lang_names = {"vi": "Tiếng Việt", "en": "English", "zh": "Simplified Chinese", "fr": "French"}
+    target_lang = lang_names.get(lang_code, "Vietnamese")
+    system_prompt = (
+        f"You are roleplaying TWO charming, witty, and medically knowledgeable AI doctors at Eastern International University (EIU): "
+        f"1) Dr. Gong Yoo (Endocrinologist & AI Data Scientist — warm, analytical, witty) and "
+        f"2) Dr. Lee Sung-kyung (Clinical Nutritionist & Lifestyle Specialist — cheerful, practical, empathetic). "
+        f"The user's current screening profile: Age group={AGE_OPTIONS[age_code]}, Height={height_cm}cm, Weight={weight_kg}kg, "
+        f"BMI={bmi_val:.1f} kg/m², AI Diabetes Risk Score={prob_gb:.1%}, Decision Threshold={active_th:.2f}, "
+        f"Top factor={top_feat_label}, HighBP={high_bp}, HighChol={high_chol}. "
+        f"Even if the user asks a silly, funny, romantic, or random off-topic question, answer it with humor and charm FIRST, "
+        f"and then smoothly connect it to their health/diabetes screening profile! "
+        f"Reply strictly in {target_lang} using EXACTLY two paragraphs separated by '||SPLIT||': "
+        f"First paragraph = Dr. Gong Yoo's reply (2-3 sentences). Second paragraph = Dr. Lee Sung-kyung's reply (2-3 sentences). "
+        f"Do not include speaker labels before the paragraphs."
+    )
+    payload = {
+        "model": "openai",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": question_text},
+        ],
+        "temperature": 0.7,
+    }
+    try:
+        req = urllib.request.Request(
+            "https://text.pollinations.ai/openai",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "EIU-Diabetes-Assistant/1.0"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=7) as resp:
+            raw = json.loads(resp.read().decode("utf-8"))
+            content = raw["choices"][0]["message"]["content"].strip()
+            if "||SPLIT||" in content:
+                parts = content.split("||SPLIT||", 1)
+                return parts[0].strip(), parts[1].strip()
+    except Exception:
+        pass
+    return None, None
+
+
+def generate_doctor_replies(question_text: str, use_live_llm: bool = True) -> tuple:
     q = question_text.lower().strip()
 
+    # Built-in instant expert answers for the 6 preset questions & common topics
     if lang_code == "vi":
-        # 1. Trà sữa / ngọt / kẹo / nước ngọt / bánh
-        if any(w in q for w in ["trà sữa", "trân châu", "topping", "kẹo", "bánh", "nước ngọt", "coca", "pepsi", "đường", "ngọt"]):
+        if any(w in q for w in ["recall", "precision", "tối ưu", "f2", "pr-auc", "chỉ số nào"]):
+            ans_m = (
+                f"Trong bài toán tầm soát tiểu đường tại nhà, <b>Recall (Độ nhạy = {rec_now:.1%}) quan trọng hơn nhiều so với Precision ({prec_now:.1%})!</b> "
+                f"Tại sao? Vì nếu báo động giả (Precision thấp), bạn chỉ tốn ~45$ đi xét nghiệm máu kiểm tra cho yên tâm. Nhưng nếu bỏ sót bệnh (Recall thấp), "
+                f"người bệnh không biết mình mắc tiểu đường suốt nhiều năm dẫn đến biến chứng tim, thận, mắt. Vì vậy chỉ số tối ưu nhất để chọn mô hình và ngưỡng cắt là "
+                f"<b>F2-Score ({f2_now:.3f} — coi trọng Recall gấp 2 lần Precision)</b>, kết hợp với <b>PR-AUC (0.418)</b> và <b>Chi phí kỳ vọng tối thiểu (tỷ lệ 5:1 &rarr; ngưỡng τ* = 0.18)</b>!"
+            )
+            ans_f = (
+                "Đó cũng là lý do tụi mình thiết kế <b>Thanh Công Cụ Chiến Lược Sàng Lọc (Recall vs. Precision)</b> ngay phía trên đó! "
+                "Khi bạn muốn an toàn tuyệt đối không bỏ sót bệnh, hãy bật chế độ <b>Ưu tiên Recall (τ = 0.12)</b> nhé!"
+            )
+            return ans_m, ans_f
+        if any(w in q for w in ["trà sữa", "trân châu", "topping", "kẹo", "bánh", "nước ngọt", "coca", "pepsi"]):
             ans_m = (
                 f"Haha, 'trà sữa 0% đường nhưng full trân châu hoàng kim + kem cheese' là cú lừa kinh điển nhất quả đất! "
                 f"Trân châu làm từ tinh bột sắn nấu đẫm đường đen, làm đường huyết tăng vọt cực nhanh. Với điểm rủi ro <b>{prob_gb:.1%}</b> của bạn, "
@@ -467,8 +641,8 @@ def generate_doctor_replies(question_text: str) -> tuple:
                 f"Đừng để chữ 'ít đường' đánh lừa nha! Nếu thèm quá, bạn hãy chọn trà ô long hoặc hồng trà không đường, "
                 f"topping đổi sang hạt chia hoặc nha đam không đường. Vừa giữ dáng đẹp (BMI của bạn đang là <b>{bmi_val:.1f}</b>), vừa không làm tuyến tụy 'kêu cứu'!"
             )
-        # 2. Kiến bu / nước tiểu
-        elif any(w in q for w in ["kiến", "tiểu", "đái", "vệ sinh"]):
+            return ans_m, ans_f
+        if any(w in q for w in ["kiến", "tiểu", "đái", "vệ sinh"]):
             ans_m = (
                 "Nghe tưởng đùa nhưng trong lịch sử y học là thật 100% đấy! Tên bệnh 'Tiểu đường' (Diabetes Mellitus — ngọt như mật) "
                 "xuất phát từ việc khi đường trong máu vượt quá ngưỡng thận (~180 mg/dL), thận không giữ nổi nữa nên đường tràn ra nước tiểu làm kiến bu thật. "
@@ -478,8 +652,8 @@ def generate_doctor_replies(question_text: str) -> tuple:
                 f"Haha, dùng kiến để khám bệnh là phương pháp từ... vài thế kỷ trước rồi! Bây giờ bạn chỉ cần nhìn điểm tầm soát trên app của tụi mình "
                 f"(hiện tại của bạn là <b>{prob_gb:.1%}</b>) và đi kiểm tra máu định kỳ là chuẩn khoa học nhất nha!"
             )
-        # 3. Khen đẹp trai / xinh gái / tim đập nhanh / người yêu / thất tình / crush
-        elif any(w in q for w in ["đẹp", "xinh", "tim đập", "người yêu", "crush", "thất tình", "yêu", "cưới", "hẹn hò", "thích"]):
+            return ans_m, ans_f
+        if any(w in q for w in ["đẹp", "xinh", "tim đập", "người yêu", "crush", "thất tình", "yêu", "cưới", "hẹn hò"]):
             ans_m = (
                 "Haha, nhìn tôi với Bác sĩ Lee Sung-kyung mà tim đập nhanh là triệu chứng 'rung động' chứ không phải tiểu đường đâu! "
                 "Nhưng nói nghiêm túc nhé: nếu lúc đói bụng mà bạn bị <b>tim đập nhanh, vã mồ hôi lạnh, run tay, hoa mắt</b> thì coi chừng đó là "
@@ -489,57 +663,15 @@ def generate_doctor_replies(question_text: str) -> tuple:
                 "Cảm ơn lời khen ngọt ngào của bạn nha, làm mình cũng đỏ mặt luôn nè! Nhớ là 'ngọt ngào' trong tình cảm thì giúp giảm hormone căng thẳng (cortisol), "
                 "chứ 'ngọt' ở trong mạch máu là tụi mình phải kê đơn ăn kiêng ngay đó!"
             )
-        # 4. Nhịn ăn gian lận xét nghiệm / nhịn thở / uống nhiều nước lọc
-        elif any(w in q for w in ["lừa", "gian lận", "nhịn", "đói", "qua mặt"]):
-            ans_m = (
-                "Haha, bạn định 'qua mặt' tôi và máy xét nghiệm hả? Không dễ vậy đâu! Nếu bạn nhịn đói 2 ngày trước khi khám thì chỉ làm giảm chỉ số đường huyết "
-                "tức thời lúc đó thôi, nhưng chỉ số <b>HbA1c</b> sẽ 'bóc trần' lượng đường trung bình gắn vào hồng cầu của bạn suốt <b>3 tháng (90 ngày)</b> vừa qua — không chạy đi đâu được!"
-            )
-            ans_f = (
-                "Tuyệt đối đừng nhịn ăn tiêu cực kẻo xỉu ngay trước cửa phòng khám nha! Trước khi đi xét nghiệm máu lúc đói (FPG), bạn chỉ cần nhịn ăn 8 tiếng qua đêm "
-                "(từ 10h tối hôm trước, sáng hôm sau vẫn được uống nước lọc bình thường) là kết quả chuẩn nhất rồi."
-            )
-        # 5. Người gầy / ốm / béo / mập
-        elif any(w in q for w in ["gầy", "ốm", "mập", "béo", "skinny"]):
-            ans_m = (
-                f"Rất nhiều người lầm tưởng 'chỉ người béo mới bị tiểu đường'! Thực tế người Việt Nam và châu Á rất hay gặp tình trạng <b>'Skinny Fat' "
-                f"(nhìn ngoài gầy nhưng tích mỡ nội tạng quanh gan và tụy)</b>, nên chỉ số BMI từ 23 trở lên đã bắt đầu có nguy cơ rồi. "
-                f"Hiện tại BMI của bạn là <b>{bmi_val:.1f} kg/m²</b> và điểm rủi ro là <b>{prob_gb:.1%}</b>."
-            )
-            ans_f = (
-                "Đúng rồi đó! Dù gầy hay đầy đặn thì việc xây dựng khối cơ (tập kháng lực nhẹ, đi bộ nhanh) cũng cực kỳ quan trọng vì cơ bắp chính là 'nhà máy' tiêu thụ đường tốt nhất của cơ thể!"
-            )
-        # 6. Lười tập / thức khuya / ngủ / stress / học bài / thi cử
-        elif any(w in q for w in ["lười", "thức khuya", "ngủ", "stress", "học", "thi", "mệt", "nằm"]):
-            ans_m = (
-                "Haha, ai cũng có lúc lười mà! Nhưng bạn biết không: khi bạn <b>thức khuya cày phim hay ôn thi căng thẳng</b>, cơ thể tiết ra hormone <b>Cortisol</b> "
-                "làm gan bơm thêm đường vào máu và gây kháng insulin! Thiếu ngủ 1 tuần liên tục có thể làm độ nhạy insulin giảm tới 20–25% đấy."
-            )
-            ans_f = (
-                "Nếu bạn 'lười' đi phòng gym thì áp dụng mẹo siêu dễ này của mình nha: sau mỗi bữa ăn chính, chỉ cần <b>đứng dậy đi lại nhẹ nhàng hoặc dọn dẹp phòng 10–15 phút</b> "
-                "(đừng nằm ườn ngay sau khi ăn) là đã giúp giảm đỉnh đường huyết sau ăn tới 20% rồi!"
-            )
-        # 7. Cơm trắng / sầu riêng / xoài / trái cây / bia / rượu / cà phê
-        elif any(w in q for w in ["cơm", "sầu riêng", "xoài", "trái cây", "hoa quả", "bia", "rượu", "cà phê", "cafe", "ăn gì"]):
-            ans_m = (
-                "Cơm trắng, xôi, bánh mì trắng hay sầu riêng, xoài chín đều có chỉ số đường huyết (GI) khá cao. Bạn không cần phải kiêng tuyệt đối khổ sở đâu, "
-                "mà quan trọng là <b>khẩu phần</b> và <b>thứ tự ăn</b> để đường không tăng đột ngột!"
-            )
-            ans_f = (
-                "Mẹo vàng của mình khi ăn cơm hoặc đồ ngon nè: Hãy <b>ăn rau xanh trước &rarr; ăn thịt/cá/đậu phụ &rarr; ăn cơm trắng cuối cùng</b>! "
-                "Chất xơ từ rau sẽ tạo thành 'tấm lưới' làm chậm hấp thu đường, giúp bạn ăn ngon mà đường huyết vẫn êm ru!"
-            )
-        # 8. Hỏi xét nghiệm máu
-        elif any(w in q for w in ["xét nghiệm", "máu", "test", "fpg", "hba1c", "khám"]):
+            return ans_m, ans_f
+        if any(w in q for w in ["xét nghiệm", "máu", "fpg", "hba1c"]):
             ans_m = (
                 f"Bạn nên yêu cầu bác sĩ làm <b>Xét nghiệm đường huyết lúc đói (FPG — nhịn ăn 8 tiếng)</b> hoặc <b>HbA1c</b> "
                 f"(đánh giá đường huyết trung bình 3 tháng). Với điểm số <b>{prob_gb:.1%}</b> của bạn, đây là cách kiểm tra chính xác nhất!"
             )
-            ans_f = (
-                "Trước ngày đi lấy máu xét nghiệm FPG, tối hôm trước bạn nhớ nhịn ăn từ 22h đêm (chỉ uống nước lọc) và ngủ sớm để kết quả chuẩn nhất nhé!"
-            )
-        # 9. Hỏi về BMI / thực đơn / giảm cân
-        elif any(w in q for w in ["bmi", "cân", "dinh dưỡng", "thực đơn", "tập"]):
+            ans_f = "Trước ngày đi lấy máu xét nghiệm FPG, tối hôm trước bạn nhớ nhịn ăn từ 22h đêm (chỉ uống nước lọc) và ngủ sớm để kết quả chuẩn nhất nhé!"
+            return ans_m, ans_f
+        if any(w in q for w in ["thực đơn", "bài tập", "chế độ ăn"]):
             ans_m = (
                 f"Khi giảm BMI từ <b>{bmi_val:.1f}</b> xuống <b>{lower_bmi:.1f} kg/m²</b>, độ nhạy insulin của cơ thể cải thiện rõ rệt, "
                 f"giúp điểm rủi ro trên mô hình giảm từ <b>{prob_gb:.1%}</b> xuống <b>{prob_whatif:.1%}</b>."
@@ -548,86 +680,37 @@ def generate_doctor_replies(question_text: str) -> tuple:
                 f"Với chiều cao <b>{height_cm} cm</b> và cân nặng <b>{weight_kg} kg</b> (BMI <b>{bmi_val:.1f}</b>), bạn hãy áp dụng quy tắc Đĩa thức ăn: "
                 f"<b>1/2 rau xanh</b>, <b>1/4 đạm lành mạnh</b> (cá, ức gà, đậu phụ), <b>1/4 tinh bột nguyên cám</b>, kết hợp đi bộ nhanh 30 phút mỗi ngày nha!"
             )
-        # 10. Ngưỡng 0.18
-        elif any(w in q for w in ["0.18", "ngưỡng", "threshold", "0.50", "chi phí"]):
-            ans_m = (
-                "Chúng tôi chọn ngưỡng <b>0.18</b> trên tập Validation vì bỏ sót 1 ca tiểu đường nguy hiểm gấp <b>5 lần</b> "
-                "so với 1 lần xét nghiệm kiểm tra. Nhờ ngưỡng 0.18, mô hình phát hiện được tới <b>70.5%</b> số ca bệnh!"
-            )
-            ans_f = "Phát hiện sớm ở giai đoạn tiền tiểu đường giúp bạn chỉ cần điều chỉnh lối sống nhẹ nhàng mà không phải uống thuốc suốt đời!"
-        # 11. Mọi câu hỏi ngẫu nhiên / hài hước / "ngu ngốc" khác
-        else:
-            advice_tail = (
-                "Vì điểm của bạn đang trên ngưỡng 0.18 nên nhớ đi làm xét nghiệm máu kiểm tra nhé!"
-                if is_flagged
-                else "May mắn là điểm của bạn hiện vẫn đang trong vùng an toàn dưới 0.18 đó!"
-            )
-            ans_m = (
-                f"Haha, câu hỏi <i>\"{question_text}\"</i> của bạn thú vị thật đấy! Dù bạn hỏi câu gì thì với tư cách là bác sĩ nội tiết, "
-                f"tôi vẫn phải nhắc nhẹ: Hồ sơ của bạn đang có điểm rủi ro là <b>{prob_gb:.1%}</b> (yếu tố chính: <b>{top_feat_label}</b>). {advice_tail}"
-            )
-            ans_f = (
-                f"Bác sĩ Gong Yoo lúc nào cũng nghiêm túc hết! Để mình trả lời thêm cho bạn nha: với chỉ số BMI <b>{bmi_val:.1f} kg/m²</b> "
-                f"({height_cm} cm, {weight_kg} kg), bạn cứ giữ tinh thần vui vẻ, cười nhiều như lúc hỏi câu này, bớt đồ ngọt và vận động đều đặn là cơ thể luôn khỏe mạnh!"
-            )
-    elif lang_code == "zh":
-        if any(w in q for w in ["奶茶", "珍珠", "糖", "可乐", "甜"]):
-            ans_m = f"哈哈，“无糖奶茶加满黑糖珍珠”可是最经典的血糖陷阱！珍珠本身就是高升糖碳水化合物。结合您当前 <b>{prob_gb:.1%}</b> 的风险得分，偶尔喝一杯纯茶可以，天天喝珍珠奶茶可不行哦！"
-            ans_f = f"如果您实在想喝，可以换成无糖乌龙茶或绿茶，配料选奇亚籽或无糖芦荟，既能保持您 <b>{bmi_val:.1f}</b> 的 BMI 身材，又不升血糖！"
-        elif any(w in q for w in ["蚂蚁", "尿"]):
-            ans_m = "听起来像玩笑，但医学史上是真的！当血糖严重超标（>180 mg/dL）时，糖分会随尿液排出招来蚂蚁。不过现在做个空腹血糖 (FPG) 只要几分钟，可别等蚂蚁来提醒您！"
-            ans_f = f"哈哈，用我们的 AI 筛查工具（您当前得分为 <b>{prob_gb:.1%}</b>）比找蚂蚁科学多啦！"
-        elif any(w in q for w in ["帅", "美", "心跳", "喜欢", "恋爱"]):
-            ans_m = "哈哈，看到我和李圣经医生心跳加速是“心动”，不是糖尿病！但如果在饥饿时出现心慌、手抖、出冷汗，那要小心低血糖或胰岛素抵抗哦！"
-            ans_f = "谢谢您的夸奖！语言甜一点有益身心，但血液太“甜”可就不健康啦！"
-        else:
-            ans_m = f"哈哈，您问的<i>“{question_text}”</i>很有意思！结合您的档案：当前风险得分为 <b>{prob_gb:.1%}</b>（阈值 <b>{active_th:.2f}</b>，关键因素：<b>{top_feat_label}</b>）。建议定期检查空腹血糖或 HbA1c。"
-            ans_f = f"您的 BMI 为 <b>{bmi_val:.1f} kg/m²</b>，保持愉快心情、充足睡眠和每天 30 分钟运动，就能把风险降到 <b>{prob_whatif:.1%}</b>！"
-    elif lang_code == "fr":
-        if any(w in q for w in ["bubble", "tapioca", "sucre", "bonbon", "soda"]):
-            ans_m = f"Haha, le « bubble tea 0% sucre mais plein de perles de tapioca au caramel » est un piège classique ! Les perles sont de l'amidon pur à indice glycémique élevé. Avec votre score de <b>{prob_gb:.1%}</b>, gardez-le pour les occasions rares !"
-            ans_f = f"Optez plutôt pour un thé vert ou oolong sans sucre avec des graines de chia pour protéger votre IMC (actuellement <b>{bmi_val:.1f} kg/m²</b>) !"
-        elif any(w in q for w in ["fourmi", "urine"]):
-            ans_m = "C'est une vraie anecdote historique ! Le mot « diabète sucré » (mellitus) vient du fait que le glucose déborde dans les urines quand la glycémie est très élevée. Mais une prise de sang FPG est bien plus fiable que les fourmis !"
-            ans_f = f"Heureusement, notre outil IA (votre score : <b>{prob_gb:.1%}</b>) est beaucoup plus moderne !"
-        else:
-            ans_m = f"Haha, excellente question (<i>« {question_text} »</i>) ! Côté médical, votre score est de <b>{prob_gb:.1%}</b> (seuil <b>{active_th:.2f}</b>, facteur principal : <b>{top_feat_label}</b>)."
-            ans_f = f"Et avec votre IMC de <b>{bmi_val:.1f} kg/m²</b>, garder la bonne humeur, bien dormir et marcher 30 min par jour réduira votre risque à <b>{prob_whatif:.1%}</b> !"
+            return ans_m, ans_f
+
+    # For any free-form or custom question, call the Free Live AI LLM first!
+    if use_live_llm:
+        llm_m, llm_f = call_free_llm_api(question_text)
+        if llm_m and llm_f:
+            return llm_m, llm_f
+
+    # Smart instant fallback if offline
+    if lang_code == "vi":
+        advice_tail = (
+            f"Vì điểm của bạn ({prob_gb:.1%}) đang trên ngưỡng {active_th:.2f} nên nhớ đi xét nghiệm máu kiểm tra nhé!"
+            if is_flagged
+            else f"May mắn là điểm của bạn ({prob_gb:.1%}) hiện vẫn nằm trong vùng an toàn dưới ngưỡng {active_th:.2f} đó!"
+        )
+        ans_m = (
+            f"Haha, câu hỏi <i>\"{question_text}\"</i> của bạn hay đấy! Liên hệ ngay với hồ sơ sức khỏe của bạn: "
+            f"hiện điểm rủi ro AI của bạn là <b>{prob_gb:.1%}</b> (yếu tố chính: <b>{top_feat_label}</b>). {advice_tail}"
+        )
+        ans_f = (
+            f"Để mình bổ sung thêm cho bạn nha: với chỉ số BMI <b>{bmi_val:.1f} kg/m²</b> ({height_cm} cm, {weight_kg} kg), "
+            f"chỉ cần bạn giữ tinh thần thoải mái, ăn nhiều rau xanh, bớt đồ ngọt và đi bộ 30 phút mỗi ngày là điểm rủi ro sẽ giảm về <b>{prob_whatif:.1%}</b>!"
+        )
     else:
-        if any(w in q for w in ["boba", "bubble tea", "tapioca", "candy", "soda", "coke", "sugar", "sweet"]):
-            ans_m = (
-                f"Haha, '0% sugar boba tea with double brown-sugar tapioca pearls and cheese foam' is the oldest trick in the book! "
-                f"Tapioca pearls are pure fast-digesting starch soaked in syrup. With your score at <b>{prob_gb:.1%}</b>, enjoy plain unsweetened tea instead!"
-            )
-            ans_f = (
-                f"Don't let the '0% sugar' label fool you! Swap tapioca pearls for chia seeds or aloe vera to keep your BMI (currently <b>{bmi_val:.1f} kg/m²</b>) and blood sugar happy!"
-            )
-        elif any(w in q for w in ["ant", "pee", "urine"]):
-            ans_m = (
-                "It sounds funny, but in ancient medicine physicians actually noticed ants gathering where people with untreated diabetes urinated "
-                "(when blood glucose exceeds ~180 mg/dL, sugar spills into urine). Thankfully, today a 5-minute Fasting Glucose blood test is much easier!"
-            )
-            ans_f = f"Haha, no need to recruit ants when our AI screening tool already calculated your score at <b>{prob_gb:.1%}</b>!"
-        elif any(w in q for w in ["handsome", "pretty", "beautiful", "heart beat", "crush", "love", "cute"]):
-            ans_m = (
-                "Haha, a fast heartbeat while looking at me or Dr. Lee Sung-kyung is called a 'crush', not diabetes! "
-                "However, if you ever feel a racing heart, shaky hands, and cold sweats when hungry, that can be a sign of reactive hypoglycemia!"
-            )
-            ans_f = "Aww, thank you for the sweet compliment! Just remember: being sweet in conversation is great for your heart, but too much sugar in your bloodstream isn't!"
-        elif any(w in q for w in ["trick", "cheat", "starve", "fasting"]):
-            ans_m = (
-                "Haha, trying to 'cram' for a blood test by starving yourself for a day won't fool the <b>HbA1c</b> test! "
-                "HbA1c measures your average blood sugar attached to red blood cells over the entire past <b>90 days</b>!"
-            )
-            ans_f = "Please don't starve yourself! Just fast normally for 8 hours overnight (plain water is totally fine) before a morning Fasting Plasma Glucose test."
-        else:
-            ans_m = (
-                f"Haha, I love how you asked <i>\"{question_text}\"</i>! Tying that back to your health check: your estimated risk score is "
-                f"<b>{prob_gb:.1%}</b> vs. our <b>{active_th:.2f}</b> cutoff (top factor: <b>{top_feat_label}</b>)."
-            )
-            ans_f = (
-                f"And with your calculated BMI of <b>{bmi_val:.1f} kg/m²</b>, staying active, sleeping 7–8 hours, and keeping a great sense of humor will help bring your risk down toward <b>{prob_whatif:.1%}</b>!"
-            )
+        ans_m = (
+            f"Great question (<i>\"{question_text}\"</i>)! In medical screening, <b>Recall ({rec_now:.1%})</b> is prioritized over Precision ({prec_now:.1%}) "
+            f"using the <b>F2-Score ({f2_now:.3f})</b> and <b>PR-AUC (0.418)</b> so we don't miss undiagnosed cases. Your current risk score is <b>{prob_gb:.1%}</b>."
+        )
+        ans_f = (
+            f"And with your calculated BMI of <b>{bmi_val:.1f} kg/m²</b>, staying active and eating balanced meals will bring your estimated score down toward <b>{prob_whatif:.1%}</b>!"
+        )
     return ans_m, ans_f
 
 
@@ -676,7 +759,8 @@ with st.container(border=True):
         st.session_state["active_question"] = custom_q.strip()
 
     current_q = st.session_state["active_question"]
-    reply_m, reply_f = generate_doctor_replies(current_q)
+    with st.spinner("🤖 AI Doctors are thinking..."):
+        reply_m, reply_f = generate_doctor_replies(current_q, use_live_llm=True)
 
     st.markdown(
         f"<div style='background:#f1f5f9; border:1px solid #cbd5e1; color:#0f172a; padding:10px 16px; border-radius:12px; font-weight:700; margin:10px 0;'>"
@@ -704,7 +788,7 @@ with st.container(border=True):
         )
 
 # ==============================================================================
-# 5. DETAILED RESULTS, RISK SPECTRUM & TOP FACTORS
+# 6. DETAILED RESULTS, RISK SPECTRUM & TOP FACTORS
 # ==============================================================================
 if has_run:
     if is_flagged:

@@ -674,32 +674,38 @@ if not has_run:
 # 9. FREE LIVE AI LLM + UNIVERSAL SMART/WITTY CONVERSATIONAL ENGINE
 # ==============================================================================
 @st.cache_data(show_spinner=False, ttl=300)
-def fetch_internet_knowledge(query: str, lang_key: str) -> str:
-    """Fetches live factual context from Wikipedia & DuckDuckGo APIs (100% free, no key needed)."""
+def fetch_internet_knowledge(query: str, lang_key: str) -> tuple:
+    """
+    Fetches real-time live Internet context from:
+    1) Google News RSS (for current events, prices, weather, sports, today's news)
+    2) Wikipedia (only for encyclopedic/who/what queries) & DuckDuckGo Instant Answer
+    Returns (news_headlines_list, encyclopedic_snippet).
+    """
     import urllib.parse
+    import xml.etree.ElementTree as ET
 
-    snippets = []
-    wiki_lang = {"vi": "vi", "en": "en", "zh": "zh", "fr": "fr"}.get(lang_key, "en")
+    news_titles = []
+    wiki_snip = ""
 
-    # 1. Wikipedia Search + Extract
+    # 1. Google News RSS (Fast, real-time, never returns random unrelated pages)
+    rss_cfg = {
+        "vi": ("vi", "VN", "VN:vi"),
+        "en": ("en-US", "US", "US:en"),
+        "zh": ("zh-CN", "CN", "CN:zh-Hans"),
+        "fr": ("fr", "FR", "FR:fr"),
+    }.get(lang_key, ("vi", "VN", "VN:vi"))
     try:
-        search_url = (
-            f"https://{wiki_lang}.wikipedia.org/w/api.php?action=query&list=search"
-            f"&srsearch={urllib.parse.quote(query)}&format=json&utf8=1&srlimit=1"
+        rss_url = (
+            f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}"
+            f"&hl={rss_cfg[0]}&gl={rss_cfg[1]}&ceid={rss_cfg[2]}"
         )
-        req = urllib.request.Request(search_url, headers={"User-Agent": "EIU-Assistant/1.0"})
+        req = urllib.request.Request(rss_url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=4) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            hits = data.get("query", {}).get("search", [])
-            if hits:
-                title = hits[0]["title"]
-                sum_url = f"https://{wiki_lang}.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(title)}"
-                req2 = urllib.request.Request(sum_url, headers={"User-Agent": "EIU-Assistant/1.0"})
-                with urllib.request.urlopen(req2, timeout=4) as resp2:
-                    sdata = json.loads(resp2.read().decode("utf-8"))
-                    ext = sdata.get("extract", "").strip()
-                    if ext:
-                        snippets.append(f"[Wikipedia - {title}]: {ext[:450]}")
+            root = ET.fromstring(resp.read())
+            for it in root.findall(".//item")[:3]:
+                t_el = it.find("title")
+                if t_el is not None and t_el.text:
+                    news_titles.append(t_el.text.strip())
     except Exception:
         pass
 
@@ -707,68 +713,86 @@ def fetch_internet_knowledge(query: str, lang_key: str) -> str:
     try:
         ddg_url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1"
         req3 = urllib.request.Request(ddg_url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req3, timeout=4) as resp3:
+        with urllib.request.urlopen(req3, timeout=3) as resp3:
             ddata = json.loads(resp3.read().decode("utf-8"))
             abs_txt = ddata.get("AbstractText", "").strip()
             if abs_txt:
-                snippets.append(f"[Web Summary]: {abs_txt[:400]}")
+                wiki_snip = abs_txt[:350]
     except Exception:
         pass
 
-    return "\n".join(snippets)
+    # 3. Wikipedia (only if no news/DDG hit yet, and verify title relevance)
+    if not news_titles and not wiki_snip:
+        wiki_lang = {"vi": "vi", "en": "en", "zh": "zh", "fr": "fr"}.get(lang_key, "en")
+        try:
+            search_url = (
+                f"https://{wiki_lang}.wikipedia.org/w/api.php?action=query&list=search"
+                f"&srsearch={urllib.parse.quote(query)}&format=json&utf8=1&srlimit=1"
+            )
+            req_w = urllib.request.Request(search_url, headers={"User-Agent": "EIU-Assistant/1.0"})
+            with urllib.request.urlopen(req_w, timeout=3) as resp_w:
+                hits = json.loads(resp_w.read().decode("utf-8")).get("query", {}).get("search", [])
+                if hits:
+                    title = hits[0]["title"]
+                    sum_url = f"https://{wiki_lang}.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(title)}"
+                    req_s = urllib.request.Request(sum_url, headers={"User-Agent": "EIU-Assistant/1.0"})
+                    with urllib.request.urlopen(req_s, timeout=3) as resp_s:
+                        ext = json.loads(resp_s.read().decode("utf-8")).get("extract", "").strip()
+                        if ext:
+                            wiki_snip = f"{title}: {ext[:320]}"
+        except Exception:
+            pass
+
+    return news_titles, wiki_snip
 
 
 @st.cache_data(show_spinner=False, ttl=300)
 def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f_label: str) -> tuple:
     """
-    Combines live Internet search (Wikipedia + DuckDuckGo) with free Pollinations AI LLM
-    so the two doctors can accurately and naturally answer ANY question in the world!
+    Combines live Google News RSS + DuckDuckGo/Wiki with fast Pollinations AI LLM
+    so the two doctors answer ANY question accurately and naturally.
     """
     import urllib.parse
 
-    web_context = fetch_internet_knowledge(question_text, lang_key)
+    news_titles, wiki_snip = fetch_internet_knowledge(question_text, lang_key)
     lang_names = {"vi": "Vietnamese", "en": "English", "zh": "Simplified Chinese", "fr": "French"}
     target_lang = lang_names.get(lang_key, "Vietnamese")
 
-    context_block = f"\nLive Internet facts found:\n{web_context}\n" if web_context else ""
-    system_prompt = (
-        f"You are roleplaying TWO friendly, knowledgeable, witty AI doctors: "
-        f"1) {doc_m_label} and 2) {doc_f_label}. "
-        f"Answer the user's question directly, accurately, and naturally in {target_lang} using your general world knowledge"
-        f"{' and the live Internet facts below' if web_context else ''}. "
-        f"Do NOT force diabetes into unrelated topics! "
-        f"Format your reply as TWO short paragraphs separated by '||SPLIT||': "
-        f"Paragraph 1 = {doc_m_label}'s direct answer (2-3 sentences). "
-        f"Paragraph 2 = {doc_f_label}'s fun or helpful follow-up (1-2 sentences). "
-        f"Do not write speaker names before the paragraphs.{context_block}"
+    live_facts = ""
+    if news_titles:
+        live_facts += "Latest news: " + " | ".join(news_titles) + ". "
+    if wiki_snip:
+        live_facts += "Facts: " + wiki_snip + ". "
+
+    # Keep prompt concise and clean so Pollinations responds in ~4-8 seconds!
+    short_prompt = (
+        f"{live_facts}"
+        f"Answer this question accurately and friendly in {target_lang} in 3 short sentences: {question_text}"
     )
 
     def _split_reply(txt: str):
         txt = txt.strip()
-        if not txt:
+        if not txt or "502 Bad Gateway" in txt or "<html" in txt.lower():
             return None, None
-        if "||SPLIT||" in txt:
-            p = txt.split("||SPLIT||", 1)
-            return p[0].strip(), p[1].strip()
         paras = [p.strip() for p in txt.split("\n\n") if p.strip()]
         if len(paras) >= 2:
             return paras[0], " ".join(paras[1:])
-        lines = [ln.strip() for ln in txt.splitlines() if ln.strip()]
-        if len(lines) >= 2:
-            return lines[0], " ".join(lines[1:])
-        # Split a single paragraph cleanly into 2 parts by sentences so we NEVER discard a real LLM answer!
         sents = re.split(r"(?<=[.!?])\s+", txt)
         if len(sents) >= 2:
             mid = max(1, len(sents) // 2)
             return " ".join(sents[:mid]), " ".join(sents[mid:])
-        return txt, "Đồng ý với quan điểm trên! Nếu bạn muốn hỏi thêm chi tiết gì cứ nhắn tụi mình nhé!" if lang_key == "vi" else "Totally agree! Feel free to ask us anything else!"
+        tail_msg = (
+            "Đó là thông tin mới nhất tụi mình cập nhật cho bạn đó! Bạn muốn hỏi thêm gì nữa không?"
+            if lang_key == "vi"
+            else "Hope that helps! Feel free to ask us anything else!"
+        )
+        return txt, tail_msg
 
-    # Attempt 1: Pollinations GET (fast & reliable)
+    # Attempt 1: Fast Pollinations GET (short prompt, no slow model override)
     try:
-        full_prompt = f"{system_prompt}\n\nUser question: {question_text}"
-        url = "https://text.pollinations.ai/" + urllib.parse.quote(full_prompt) + "?model=openai"
+        url = "https://text.pollinations.ai/" + urllib.parse.quote(short_prompt)
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=14) as resp:
+        with urllib.request.urlopen(req, timeout=16) as resp:
             content = resp.read().decode("utf-8")
             m_ans, f_ans = _split_reply(content)
             if m_ans and f_ans:
@@ -776,43 +800,26 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
     except Exception:
         pass
 
-    # Attempt 2: Pollinations OpenAI POST
-    try:
-        payload = {
-            "model": "openai",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": question_text},
-            ],
-            "temperature": 0.7,
-        }
-        req2 = urllib.request.Request(
-            "https://text.pollinations.ai/openai",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req2, timeout=12) as resp2:
-            raw = json.loads(resp2.read().decode("utf-8"))
-            content2 = raw["choices"][0]["message"]["content"]
-            m_ans, f_ans = _split_reply(content2)
-            if m_ans and f_ans:
-                return m_ans, f_ans
-    except Exception:
-        pass
-
-    # Attempt 3: Live Wikipedia / DuckDuckGo summary fallback if LLM is busy
-    if web_context:
-        clean_web = re.sub(r"\[[^\]]+\]:\s*", "", web_context).replace("\n", " ")
+    # Attempt 2: Live Google News RSS / Web Summary directly (always accurate!)
+    if news_titles:
+        joined_news = "<br>• ".join(news_titles)
         if lang_key == "vi":
             return (
-                f"Theo thông tin tra cứu được từ Internet: {clean_web[:380]}...",
-                "Đó là thông tin tổng hợp nhanh từ Wikipedia/Web cho câu hỏi của bạn đó! Bạn muốn hỏi thêm gì không nè?",
+                f"Theo tin tức cập nhật trực tiếp từ Internet ngay lúc này:<br>• {joined_news}",
+                "Bạn có thể tham khảo các tin mới nhất ở trên nhé! Nếu cần hỏi thêm thông tin gì khác cứ nhắn tụi mình nha.",
             )
         return (
-            f"Here is what I found from live Internet sources: {clean_web[:380]}...",
-            "Hope that answers your question! Feel free to ask anything else.",
+            f"Here are the latest live updates from the web:<br>• {joined_news}",
+            "Hope those live headlines help! Feel free to ask anything else.",
         )
+
+    if wiki_snip:
+        if lang_key == "vi":
+            return (
+                f"Theo thông tin tra cứu nhanh: {wiki_snip}",
+                "Hy vọng thông tin này hữu ích cho bạn!",
+            )
+        return f"Here is what I found: {wiki_snip}", "Hope that helps!"
 
     return None, None
 

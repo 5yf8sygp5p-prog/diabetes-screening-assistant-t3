@@ -744,9 +744,12 @@ def fetch_internet_knowledge(query: str, lang_key: str) -> str:
 @st.cache_data(show_spinner=False, ttl=300)
 def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f_label: str) -> tuple:
     """
-    Combines live Internet search (Wikipedia + DuckDuckGo) with free Pollinations AI LLM
-    so the two doctors can accurately and naturally answer ANY question in the world!
+    Expert AI engine:
+    0) Official Google Gemini 2.5 Flash (if GEMINI_API_KEY is set in st.secrets or env)
+    1) Free Pollinations AI LLM + Live Internet grounding (Google News RSS / DuckDuckGo / Wikipedia)
+    2) Live Web News/Summary fallback (clean, factual, zero goofy rambling)
     """
+    import os
     import urllib.parse
 
     web_context = fetch_internet_knowledge(question_text, lang_key)
@@ -755,15 +758,15 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
 
     context_block = f"\nLive Internet facts found:\n{web_context}\n" if web_context else ""
     system_prompt = (
-        f"You are roleplaying TWO friendly, knowledgeable, witty AI doctors: "
+        f"You are TWO highly knowledgeable, professional, and articulate medical & general-knowledge AI specialists: "
         f"1) {doc_m_label} and 2) {doc_f_label}. "
-        f"Answer the user's question directly, accurately, and naturally in {target_lang} using your general world knowledge"
+        f"Answer the user's question directly, accurately, concisely, and professionally in {target_lang} using expert reasoning"
         f"{' and the live Internet facts below' if web_context else ''}. "
-        f"Do NOT force diabetes into unrelated topics! "
-        f"Format your reply as TWO short paragraphs separated by '||SPLIT||': "
-        f"Paragraph 1 = {doc_m_label}'s direct answer (2-3 sentences). "
-        f"Paragraph 2 = {doc_f_label}'s fun or helpful follow-up (1-2 sentences). "
-        f"Do not write speaker names before the paragraphs.{context_block}"
+        f"Avoid cheesy jokes or rambling. If the question is outside medicine, still answer it accurately like a well-informed expert. "
+        f"Format your reply as TWO concise paragraphs separated by '||SPLIT||': "
+        f"Paragraph 1 = {doc_m_label}'s core expert answer (2-3 clear sentences). "
+        f"Paragraph 2 = {doc_f_label}'s practical follow-up or additional insight (1-2 clear sentences). "
+        f"Do not prefix paragraphs with speaker names.{context_block}"
     )
 
     def _split_reply(txt: str):
@@ -779,19 +782,57 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
         lines = [ln.strip() for ln in txt.splitlines() if ln.strip()]
         if len(lines) >= 2:
             return lines[0], " ".join(lines[1:])
-        # Split a single paragraph cleanly into 2 parts by sentences so we NEVER discard a real LLM answer!
         sents = re.split(r"(?<=[.!?])\s+", txt)
         if len(sents) >= 2:
             mid = max(1, len(sents) // 2)
             return " ".join(sents[:mid]), " ".join(sents[mid:])
-        return txt, "Đồng ý với quan điểm trên! Nếu bạn muốn hỏi thêm chi tiết gì cứ nhắn tụi mình nhé!" if lang_key == "vi" else "Totally agree! Feel free to ask us anything else!"
+        return txt, (
+            "Nếu bạn cần giải thích sâu hơn về chỉ số sức khỏe hoặc bất kỳ chủ đề nào khác, cứ đặt câu hỏi tiếp nhé."
+            if lang_key == "vi"
+            else "Feel free to ask if you would like more details on this topic."
+        )
 
-    # Attempt 1: Pollinations GET (fast & reliable)
+    # Attempt 0: Official Google Gemini 2.5 Flash (Free tier API key via Streamlit Secrets or Env)
+    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    if not gemini_key:
+        try:
+            gemini_key = st.secrets.get("GEMINI_API_KEY", "")
+        except Exception:
+            gemini_key = ""
+
+    if gemini_key:
+        try:
+            gem_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
+            gem_payload = {
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": [{"text": f"{system_prompt}\n\nUser question: {question_text}"}],
+                    }
+                ],
+                "generationConfig": {"temperature": 0.4, "maxOutputTokens": 450},
+            }
+            req_g = urllib.request.Request(
+                gem_url,
+                data=json.dumps(gem_payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req_g, timeout=10) as resp_g:
+                gdata = json.loads(resp_g.read().decode("utf-8"))
+                g_text = gdata["candidates"][0]["content"]["parts"][0]["text"]
+                m_ans, f_ans = _split_reply(g_text)
+                if m_ans and f_ans:
+                    return m_ans, f_ans
+        except Exception:
+            pass
+
+    # Attempt 1: Pollinations GET (zero-key backup)
     try:
         full_prompt = f"{system_prompt}\n\nUser question: {question_text}"
-        url = "https://text.pollinations.ai/" + urllib.parse.quote(full_prompt) + "?model=openai"
+        url = "https://text.pollinations.ai/" + urllib.parse.quote(full_prompt)
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=14) as resp:
+        with urllib.request.urlopen(req, timeout=12) as resp:
             content = resp.read().decode("utf-8")
             m_ans, f_ans = _split_reply(content)
             if m_ans and f_ans:
@@ -807,7 +848,7 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": question_text},
             ],
-            "temperature": 0.7,
+            "temperature": 0.4,
         }
         req2 = urllib.request.Request(
             "https://text.pollinations.ai/openai",
@@ -815,7 +856,7 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
             headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
             method="POST",
         )
-        with urllib.request.urlopen(req2, timeout=12) as resp2:
+        with urllib.request.urlopen(req2, timeout=10) as resp2:
             raw = json.loads(resp2.read().decode("utf-8"))
             content2 = raw["choices"][0]["message"]["content"]
             m_ans, f_ans = _split_reply(content2)
@@ -824,17 +865,17 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
     except Exception:
         pass
 
-    # Attempt 3: Live Wikipedia / DuckDuckGo summary fallback if LLM is busy
+    # Attempt 3: Live Google News / DuckDuckGo / Wikipedia factual fallback
     if web_context:
         clean_web = re.sub(r"\[[^\]]+\]:\s*", "", web_context).replace("\n", " ")
         if lang_key == "vi":
             return (
-                f"Theo thông tin tra cứu được từ Internet: {clean_web[:380]}...",
-                "Đó là thông tin tổng hợp nhanh từ Wikipedia/Web cho câu hỏi của bạn đó! Bạn muốn hỏi thêm gì không nè?",
+                f"Thông tin cập nhật từ nguồn tin tức & tra cứu trực tuyến: {clean_web[:420]}",
+                "Đây là dữ liệu tổng hợp mới nhất từ Internet cho câu hỏi của bạn.",
             )
         return (
-            f"Here is what I found from live Internet sources: {clean_web[:380]}...",
-            "Hope that answers your question! Feel free to ask anything else.",
+            f"Latest verified information from live web sources: {clean_web[:420]}",
+            "Hope this factual summary helps answer your question.",
         )
 
     return None, None

@@ -499,9 +499,12 @@ def inject_friendly_css():
     st.markdown(
         "<style>"
         "@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');"
-        "html, body, .stApp, [class*='css'], h1, h2, h3, h4, h5, p, div, span, label, table, th, td, button, input {"
+        "html, body, .stApp, h1, h2, h3, h4, h5, p, label, table, th, td, button, input {"
         "font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif !important;"
         "color: #0f172a;"
+        "}"
+        "span[data-testid='stIconMaterial'] {"
+        "font-family: 'Material Symbols Rounded' !important;"
         "}"
         ".stApp {"
         "background: linear-gradient(180deg, #f0f6fc 0%, #f8fafc 100%) !important;"

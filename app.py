@@ -527,50 +527,64 @@ def build_medical_ecg_wav() -> bytes:
 
 
 def prepare_expressive_text(text_clean: str, lang_key: str, gender: str) -> str:
-    """Formats medical symbols & adds natural conversational pauses for expressive TTS."""
+    """Formats medical symbols & adds gentle breathing pauses for warm, human-like intonation."""
     txt = text_clean.strip()
     if lang_key == "vi":
         txt = txt.replace("kg/m²", "ki-lô-gam trên mét vuông")
         txt = txt.replace("HbA1c", "Hát bê A một xê")
-        txt = txt.replace("FPG", "đường huyết lúc đói Ép Pê Gê")
+        txt = txt.replace("FPG", "đường huyết lúc đói")
         txt = txt.replace("PR-AUC", "Pê Rờ A U Cê")
         txt = txt.replace("F2-Score", "điểm Ép hai")
-        txt = txt.replace("τ*", "ngưỡng cắt")
-        txt = txt.replace("τ", "ngưỡng cắt")
-        txt = txt.replace("—", "... ")
+        txt = txt.replace("τ*", "mốc kiểm tra")
+        txt = txt.replace("τ", "mốc kiểm tra")
+        # Add natural micro-pauses for expressive emphasis
+        txt = txt.replace("—", "... ").replace(":", "... ").replace(";", ", ")
         txt = txt.replace("(", ", ").replace(")", ", ")
-        txt = txt.replace(":", "... ")
-        if gender == "male":
-            txt = "Chào bạn... " + txt if not txt.startswith(("Chào", "Haha", "À", "Tin")) else txt
-        else:
-            txt = "Bạn ơi... " + txt if not txt.startswith(("Xin", "Haha", "Cảm", "Đừng")) else txt
+        txt = txt.replace("!", "!... ")
     elif lang_key == "en":
         txt = txt.replace("kg/m²", "kilograms per square meter")
         txt = txt.replace("τ*", "threshold").replace("τ", "threshold")
-        txt = txt.replace("—", "... ")
+        txt = txt.replace("—", "... ").replace("!", "!... ")
     elif lang_key == "zh":
         txt = txt.replace("kg/m²", "千克每平方米")
     elif lang_key == "fr":
         txt = txt.replace("kg/m²", "kilogrammes par mètre carré")
-    # Collapse excess spaces
     return re.sub(r"\s+", " ", txt).strip()
 
 
 @st.cache_data(show_spinner=False)
-def synthesize_voice_mp3(text_clean: str, lang_key: str, gender: str = "female"):
-    """Generates expressive Male and Female neural voiceovers with natural pitch, rate & pauses."""
-    voice_map = {
-        ("vi", "male"): ("vi-VN-NamMinhNeural", "+3%", "-4Hz"),
-        ("vi", "female"): ("vi-VN-HoaiMyNeural", "+5%", "+6Hz"),
-        ("en", "male"): ("en-US-GuyNeural", "+2%", "-3Hz"),
-        ("en", "female"): ("en-US-JennyNeural", "+4%", "+5Hz"),
-        ("zh", "male"): ("zh-CN-YunxiNeural", "+3%", "-3Hz"),
-        ("zh", "female"): ("zh-CN-XiaoxiaoNeural", "+5%", "+5Hz"),
-        ("fr", "male"): ("fr-FR-HenriNeural", "+2%", "-3Hz"),
-        ("fr", "female"): ("fr-FR-DeniseNeural", "+4%", "+5Hz"),
-    }
+def synthesize_voice_mp3(text_clean: str, lang_key: str, gender: str = "female", voice_style: str = "warm"):
+    """
+    Generates warm, expressive Male and Female neural voiceovers via edge-tts.
+    Supports:
+    - 'warm': Multilingual Neural Voices (Ava/Andrew) — soft, empathetic, natural human cadence
+    - 'native': Native Country Neural Voices (HoaiMy/NamMinh, Jenny/Guy, Xiaoyi/Yunjian, Vivienne/Remy) at gentle -6% pace
+    """
+    if voice_style == "warm":
+        voice_map = {
+            ("vi", "male"): ("en-US-AndrewMultilingualNeural", "-5%", "-2Hz"),
+            ("vi", "female"): ("en-US-AvaMultilingualNeural", "-4%", "+3Hz"),
+            ("en", "male"): ("en-US-AndrewMultilingualNeural", "-4%", "-2Hz"),
+            ("en", "female"): ("en-US-AvaMultilingualNeural", "-3%", "+3Hz"),
+            ("zh", "male"): ("zh-CN-YunjianNeural", "-5%", "-2Hz"),
+            ("zh", "female"): ("zh-CN-XiaoyiNeural", "-4%", "+4Hz"),
+            ("fr", "male"): ("fr-FR-RemyMultilingualNeural", "-4%", "-2Hz"),
+            ("fr", "female"): ("fr-FR-VivienneMultilingualNeural", "-3%", "+3Hz"),
+        }
+    else:
+        voice_map = {
+            ("vi", "male"): ("vi-VN-NamMinhNeural", "-6%", "-3Hz"),
+            ("vi", "female"): ("vi-VN-HoaiMyNeural", "-5%", "+4Hz"),
+            ("en", "male"): ("en-US-BrianMultilingualNeural", "-4%", "-2Hz"),
+            ("en", "female"): ("en-US-EmmaMultilingualNeural", "-3%", "+3Hz"),
+            ("zh", "male"): ("zh-CN-YunxiNeural", "-5%", "-2Hz"),
+            ("zh", "female"): ("zh-CN-XiaoxiaoNeural", "-4%", "+4Hz"),
+            ("fr", "male"): ("fr-FR-HenriNeural", "-5%", "-2Hz"),
+            ("fr", "female"): ("fr-FR-DeniseNeural", "-4%", "+3Hz"),
+        }
+
     chosen_voice, chosen_rate, chosen_pitch = voice_map.get(
-        (lang_key, gender), ("vi-VN-HoaiMyNeural", "+5%", "+6Hz")
+        (lang_key, gender), ("en-US-AvaMultilingualNeural", "-4%", "+3Hz")
     )
     spoken_text = prepare_expressive_text(text_clean, lang_key, gender)
 
@@ -645,15 +659,31 @@ AUDIO_BTN_LABELS = {
 }
 btn_m_lbl, btn_f_lbl, btn_sfx_lbl, audio_bar_lbl = AUDIO_BTN_LABELS.get(lang_code, AUDIO_BTN_LABELS["en"])
 
+VOICE_STYLE_I18N = {
+    "vi": ("🎙️ Chọn chất giọng:", "✨ Giọng Ấm Áp, Tự Nhiên (Khuyên dùng)", "🎙️ Giọng Truyền Thống (Chậm rãi, Nhấn nhá)"),
+    "en": ("🎙️ Voice style:", "✨ Warm & Expressive (Ava / Andrew)", "🎙️ Crisp Studio (Emma / Brian)"),
+    "zh": ("🎙️ 音色选择：", "✨ 温柔自然（推荐）", "🎙️ 标准播报"),
+    "fr": ("🎙️ Style de voix :", "✨ Chaleureuse & Naturelle", "🎙️ Classique"),
+}
+vs_lbl, vs_warm, vs_native = VOICE_STYLE_I18N.get(lang_code, VOICE_STYLE_I18N["en"])
+
 st.caption(audio_bar_lbl)
+voice_style_choice = st.radio(
+    vs_lbl,
+    options=["warm", "native"],
+    format_func=lambda k: vs_warm if k == "warm" else vs_native,
+    horizontal=True,
+    index=0,
+)
+
 au_c1, au_c2, au_c3 = st.columns(3)
 if au_c1.button(btn_m_lbl, key="btn_voice_m_top", use_container_width=True):
     st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
-        clean_m_voice, lang_code, gender="male"
+        clean_m_voice, lang_code, gender="male", voice_style=voice_style_choice
     )
 if au_c2.button(btn_f_lbl, key="btn_voice_f_top", use_container_width=True):
     st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
-        clean_f_voice, lang_code, gender="female"
+        clean_f_voice, lang_code, gender="female", voice_style=voice_style_choice
     )
 if au_c3.button(btn_sfx_lbl, key="btn_sfx_top", use_container_width=True):
     st.session_state["active_audio_bytes"] = build_medical_ecg_wav()
@@ -758,14 +788,17 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
 
     context_block = f"\nLive Internet facts found:\n{web_context}\n" if web_context else ""
     system_prompt = (
-        f"You are TWO highly knowledgeable, professional, and articulate medical & general-knowledge AI specialists: "
-        f"1) {doc_m_label} and 2) {doc_f_label}. "
-        f"Answer the user's question directly, accurately, concisely, and professionally in {target_lang} using expert reasoning"
-        f"{' and the live Internet facts below' if web_context else ''}. "
-        f"Avoid cheesy jokes or rambling. If the question is outside medicine, still answer it accurately like a well-informed expert. "
+        f"You are roleplaying TWO senior, deeply empathetic, warm, and highly knowledgeable specialists: "
+        f"1) {doc_m_label} (calm, reassuring, analytically sharp, speaks with genuine care) and "
+        f"2) {doc_f_label} (warm-hearted, encouraging, practical, speaks with gentle human emotion). "
+        f"Answer the user's question directly, accurately, and thoughtfully in {target_lang}"
+        f"{' using the live Internet facts below' if web_context else ''}. "
+        f"Strike the perfect balance: sound like caring, seasoned experts talking to a friend—use natural warmth, "
+        f"empathetic phrasing, and smooth rhythm (not stiff or robotic, and not silly/flippant). "
+        f"If the question is outside medicine, answer it accurately and insightfully like a cultured, caring mentor. "
         f"Format your reply as TWO concise paragraphs separated by '||SPLIT||': "
-        f"Paragraph 1 = {doc_m_label}'s core expert answer (2-3 clear sentences). "
-        f"Paragraph 2 = {doc_f_label}'s practical follow-up or additional insight (1-2 clear sentences). "
+        f"Paragraph 1 = {doc_m_label}'s warm, expert answer (2-3 natural sentences). "
+        f"Paragraph 2 = {doc_f_label}'s caring, practical follow-up (1-2 natural sentences). "
         f"Do not prefix paragraphs with speaker names.{context_block}"
     )
 
@@ -1055,11 +1088,11 @@ with st.container(border=True):
     ca1, ca2 = st.columns(2)
     if ca1.button(f"{btn_m_lbl} (Chat)", key="btn_chat_voice_m", use_container_width=True):
         st.session_state["chat_audio_bytes"], st.session_state["chat_audio_fmt"] = synthesize_voice_mp3(
-            clean_chat_m, lang_code, gender="male"
+            clean_chat_m, lang_code, gender="male", voice_style=voice_style_choice
         )
     if ca2.button(f"{btn_f_lbl} (Chat)", key="btn_chat_voice_f", use_container_width=True):
         st.session_state["chat_audio_bytes"], st.session_state["chat_audio_fmt"] = synthesize_voice_mp3(
-            clean_chat_f, lang_code, gender="female"
+            clean_chat_f, lang_code, gender="female", voice_style=voice_style_choice
         )
     if st.session_state.get("chat_audio_bytes"):
         st.audio(

@@ -511,11 +511,42 @@ def inject_friendly_css():
         "font-family: 'Material Symbols Rounded' !important;"
         "}"
         "section[data-testid='stSidebar'], section[data-testid='stSidebar'] > div {"
-        "background-color: #ffffff !important;"
-        "border-right: 1.5px solid #cbd5e1 !important;"
+        "background-color: #f8fafc !important;"
+        "border-right: 1.5px solid #e2e8f0 !important;"
         "}"
         "section[data-testid='stSidebar'] p, section[data-testid='stSidebar'] span, section[data-testid='stSidebar'] label, section[data-testid='stSidebar'] div {"
         "color: #1e293b !important;"
+        "}"
+        "/* Transform Sidebar Radio into sleek modern SaaS Navigation Pill Tabs (hide ugly radio circles in sidebar) */"
+        "section[data-testid='stSidebar'] div[role='radiogroup'] {"
+        "gap: 4px !important;"
+        "width: 100% !important;"
+        "}"
+        "section[data-testid='stSidebar'] div[role='radiogroup'] > label {"
+        "background-color: transparent !important;"
+        "border: 1px solid transparent !important;"
+        "border-radius: 10px !important;"
+        "padding: 9px 14px !important;"
+        "margin-bottom: 2px !important;"
+        "width: 100% !important;"
+        "cursor: pointer !important;"
+        "transition: all 0.15s ease !important;"
+        "}"
+        "section[data-testid='stSidebar'] div[role='radiogroup'] > label:hover {"
+        "background-color: #e2e8f0 !important;"
+        "}"
+        "section[data-testid='stSidebar'] div[role='radiogroup'] > label > div:first-child {"
+        "display: none !important;"
+        "}"
+        "section[data-testid='stSidebar'] div[role='radiogroup'] > label:has(input:checked) {"
+        "background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;"
+        "border-color: #1d4ed8 !important;"
+        "box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2) !important;"
+        "}"
+        "section[data-testid='stSidebar'] div[role='radiogroup'] > label:has(input:checked) p, "
+        "section[data-testid='stSidebar'] div[role='radiogroup'] > label:has(input:checked) span {"
+        "color: #ffffff !important;"
+        "font-weight: 700 !important;"
         "}"
         "/* Force readable dark text & light background on all containers and widgets even when browser is in Dark Mode */"
         "[data-testid='stVerticalBlockBorderWrapper'] {"
@@ -660,32 +691,115 @@ def inject_friendly_css():
     )
 
 
-def render_sidebar_and_get_lang() -> tuple:
-    """Renders the EIU logo, language selector, and mandatory educational disclaimer in the sidebar."""
-    st.sidebar.markdown(
-        f"<div style='background:#ffffff; padding:12px 14px; border-radius:12px; border:1px solid #e2e8f0; text-align:center; margin-bottom:14px; box-shadow:0 2px 8px rgba(15,23,42,0.04);'>"
-        f"<img src='data:image/png;base64,{EIU_LOGO_B64}' style='max-width:170px; height:auto; margin-bottom:4px;'/>"
-        f"<div style='font-size:0.73rem; font-weight:700; color:#1e3a5f; letter-spacing:0.3px;'>EASTERN INTERNATIONAL UNIVERSITY</div>"
-        f"<div style='font-size:0.68rem; color:#64748b;'>Becamex Business School &bull; Topic T3</div>"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
-    if "lang_choice" not in st.session_state:
-        st.session_state["lang_choice"] = "🇬🇧 English"
+LOGO_TEXT_I18N = {
+    "en": (
+        "EASTERN INTERNATIONAL UNIVERSITY",
+        "Becamex Business School • Topic T3",
+        "🏛️ Eastern International University (EIU) • Healthcare Decision-Support System",
+        "🌐 Display Language",
+        "📌 Menu Navigation",
+    ),
+    "vi": (
+        "ĐẠI HỌC QUỐC TẾ MIỀN ĐÔNG (EIU)",
+        "Trường Kinh doanh Becamex • Đề tài T3",
+        "🏛️ Đại học Quốc tế Miền Đông (EIU) • Hệ thống Hỗ trợ Quyết định Y tế",
+        "🌐 Ngôn ngữ hiển thị",
+        "📌 Danh mục Trang",
+    ),
+    "zh": (
+        "东方国际大学 (EIU)",
+        "Becamex 商学院 • 课题 T3",
+        "🏛️ 东方国际大学 (EIU) • 医疗决策支持系统",
+        "🌐 显示语言 (Language)",
+        "📌 页面导航",
+    ),
+    "fr": (
+        "UNIVERSITÉ INTERNATIONALE DE L'EST",
+        "École de Commerce Becamex • Sujet T3",
+        "🏛️ Université Internationale de l'Est (EIU) • Système d'Aide à la Décision",
+        "🌐 Langue d'affichage",
+        "📌 Navigation",
+    ),
+}
 
+NAV_TABS_I18N = {
+    "en": {
+        "app": "🩺 Screening Assistant",
+        "Threshold and Cost": "⚖️ Threshold & Cost",
+        "Health Equity": "🤝 Health Equity",
+        "About Model": "📖 About Model",
+        "Batch Screening": "📂 Batch Screening",
+    },
+    "vi": {
+        "app": "🩺 Trợ lý Sàng lọc",
+        "Threshold and Cost": "⚖️ Ngưỡng cắt & Chi phí",
+        "Health Equity": "🤝 Công bằng Y tế",
+        "About Model": "📖 Về Mô hình AI",
+        "Batch Screening": "📂 Tầm soát Hàng loạt",
+    },
+    "zh": {
+        "app": "🩺 糖尿病筛查助手",
+        "Threshold and Cost": "⚖️ 阈值与成本模拟",
+        "Health Equity": "🤝 健康公平性评估",
+        "About Model": "📖 关于模型与数据",
+        "Batch Screening": "📂 批量筛查 (CSV)",
+    },
+    "fr": {
+        "app": "🩺 Assistant de Dépistage",
+        "Threshold and Cost": "⚖️ Seuil et Coûts",
+        "Health Equity": "🤝 Équité en Santé",
+        "About Model": "📖 À propos du Modèle",
+        "Batch Screening": "📂 Dépistage par Lot",
+    },
+}
+
+
+def render_sidebar_and_get_lang() -> tuple:
+    """Renders the translated EIU logo, smart language selector, and disclaimer in the sidebar."""
+    if st.session_state.get("_sidebar_done", False):
+        lang_code = LANGUAGES[st.session_state.get("lang_choice", "🇬🇧 English")]
+        return lang_code, TRANSLATIONS[lang_code]
+
+    if "lang_choice" not in st.session_state:
+        st.session_state["lang_choice"] = "🇻🇳 Tiếng Việt"
+
+    cur_lang = LANGUAGES[st.session_state["lang_choice"]]
+    uni_title, uni_sub, _, lang_lbl, _ = LOGO_TEXT_I18N.get(cur_lang, LOGO_TEXT_I18N["en"])
+
+    # 1. EIU Logo Card at top of Sidebar (Translated!)
+    logo_slot = st.sidebar.empty()
+
+    # 2. Smart Compact Language Switcher
     selected_label = st.sidebar.selectbox(
-        "🌐 Language / Ngôn ngữ / 语言 / Langue",
+        lang_lbl,
         options=list(LANGUAGES.keys()),
         index=list(LANGUAGES.keys()).index(st.session_state["lang_choice"]),
+        key="_lang_select_widget",
     )
     st.session_state["lang_choice"] = selected_label
     lang_code = LANGUAGES[selected_label]
     t = TRANSLATIONS[lang_code]
+    uni_title, uni_sub, _, _, _ = LOGO_TEXT_I18N.get(lang_code, LOGO_TEXT_I18N["en"])
 
+    logo_slot.markdown(
+        f"<div style='background:#ffffff; padding:14px 14px 12px 14px; border-radius:14px; border:1.5px solid #cbd5e1; "
+        f"text-align:center; margin-bottom:10px; box-shadow:0 3px 10px rgba(15,23,42,0.04);'>"
+        f"<img src='data:image/png;base64,{EIU_LOGO_B64}' style='max-width:165px; height:auto; margin-bottom:6px;'/>"
+        f"<div style='font-size:0.74rem; font-weight:800; color:#1e3a8a; letter-spacing:0.3px; line-height:1.3;'>{uni_title}</div>"
+        f"<div style='font-size:0.7rem; font-weight:600; color:#475569; margin-top:2px;'>{uni_sub}</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+    # 3. Placeholder for Navigation Menu (populated by app.py if in flat mode)
+    st.session_state["_nav_placeholder"] = st.sidebar.container()
+
+    # 4. Educational Disclaimer Box at bottom
     st.sidebar.markdown(
         f"<div class='edu-warning-box'>{t['disclaimer_box']}</div>",
         unsafe_allow_html=True,
     )
+    st.session_state["_sidebar_done"] = True
     return lang_code, t
 
 

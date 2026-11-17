@@ -92,15 +92,59 @@ st.markdown(
     "background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important; color: #ffffff !important; border: none !important;"
     "}"
     "div[data-testid='stFormSubmitButton'] > button *, .stButton > button[kind='primary'] * { color: #ffffff !important; }"
+    "/* Sleek SaaS Sidebar Navigation Pill Tabs */"
+    "section[data-testid='stSidebar'] div[role='radiogroup'] { gap: 4px !important; width: 100% !important; }"
+    "section[data-testid='stSidebar'] div[role='radiogroup'] > label {"
+    "background-color: #ffffff !important; border: 1px solid #e2e8f0 !important; border-radius: 10px !important;"
+    "padding: 9px 14px !important; margin-bottom: 3px !important; width: 100% !important; cursor: pointer !important;"
+    "transition: all 0.15s ease !important;"
+    "}"
+    "section[data-testid='stSidebar'] div[role='radiogroup'] > label:hover { background-color: #eff6ff !important; border-color: #93c5fd !important; }"
+    "section[data-testid='stSidebar'] div[role='radiogroup'] > label > div:first-child { display: none !important; }"
+    "section[data-testid='stSidebar'] div[role='radiogroup'] > label:has(input:checked) {"
+    "background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important; border-color: #1d4ed8 !important;"
+    "box-shadow: 0 4px 10px rgba(37, 99, 235, 0.22) !important;"
+    "}"
+    "section[data-testid='stSidebar'] div[role='radiogroup'] > label:has(input:checked) p,"
+    "section[data-testid='stSidebar'] div[role='radiogroup'] > label:has(input:checked) span {"
+    "color: #ffffff !important; font-weight: 700 !important;"
+    "}"
     "</style>",
     unsafe_allow_html=True,
 )
 
-# Support flat root GitHub upload as well as subfolder structure
+st.session_state["_sidebar_done"] = False
+lang_code, t = render_sidebar_and_get_lang()
+
+_LOGO_I18N = getattr(
+    i18n,
+    "LOGO_TEXT_I18N",
+    {
+        "en": ("EASTERN INTERNATIONAL UNIVERSITY", "Becamex Business School • Topic T3", "🏛️ Eastern International University (EIU) • Healthcare Decision-Support System", "🌐 Display Language", "📌 Menu Navigation"),
+        "vi": ("ĐẠI HỌC QUỐC TẾ MIỀN ĐÔNG (EIU)", "Trường Kinh doanh Becamex • Đề tài T3", "🏛️ Đại học Quốc tế Miền Đông (EIU) • Hệ thống Hỗ trợ Quyết định Y tế", "🌐 Ngôn ngữ hiển thị", "📌 Danh mục Trang"),
+        "zh": ("东方国际大学 (EIU)", "Becamex 商学院 • 课题 T3", "🏛️ 东方国际大学 (EIU) • 医疗决策支持系统", "🌐 显示语言", "📌 页面导航"),
+        "fr": ("UNIVERSITÉ INTERNATIONALE DE L'EST", "École de Commerce Becamex • Sujet T3", "🏛️ Université Internationale de l'Est (EIU) • Système d'Aide à la Décision", "🌐 Langue d'affichage", "📌 Navigation"),
+    },
+)
+_NAV_I18N = getattr(
+    i18n,
+    "NAV_TABS_I18N",
+    {
+        "en": {"app": "🩺 Screening Assistant", "Threshold and Cost": "⚖️ Threshold & Cost", "Health Equity": "🤝 Health Equity", "About Model": "📖 About Model", "Batch Screening": "📂 Batch Screening"},
+        "vi": {"app": "🩺 Trợ lý Sàng lọc", "Threshold and Cost": "⚖️ Ngưỡng cắt & Chi phí", "Health Equity": "🤝 Công bằng Y tế", "About Model": "📖 Về Mô hình AI", "Batch Screening": "📂 Tầm soát Hàng loạt"},
+        "zh": {"app": "🩺 糖尿病筛查助手", "Threshold and Cost": "⚖️ 阈值与成本模拟", "Health Equity": "🤝 健康公平性评估", "About Model": "📖 关于模型与数据", "Batch Screening": "📂 批量筛查 (CSV)"},
+        "fr": {"app": "🩺 Assistant de Dépistage", "Threshold and Cost": "⚖️ Seuil et Coûts", "Health Equity": "🤝 Équité en Santé", "About Model": "📖 À propos du Modèle", "Batch Screening": "📂 Dépistage par Lot"},
+    },
+)
+_, _, _header_badge_txt, _, _nav_title_txt = _LOGO_I18N.get(lang_code, _LOGO_I18N["en"])
+_nav_labels = _NAV_I18N.get(lang_code, _NAV_I18N["en"])
+
+# Support flat root GitHub upload as well as subfolder structure with translated Sidebar Pill Tabs
 _base_dir = Path(__file__).resolve().parent
 if not (_base_dir / "pages").exists() and (_base_dir / "1_Threshold_and_Cost.py").exists():
-    _flat_page = st.sidebar.radio(
-        "Navigation",
+    _nav_slot = st.session_state.get("_nav_placeholder", st.sidebar)
+    _flat_page = _nav_slot.radio(
+        _nav_title_txt,
         options=[
             "app",
             "Threshold and Cost",
@@ -108,7 +152,7 @@ if not (_base_dir / "pages").exists() and (_base_dir / "1_Threshold_and_Cost.py"
             "About Model",
             "Batch Screening",
         ],
-        label_visibility="collapsed",
+        format_func=lambda k: _nav_labels.get(k, k),
     )
     if _flat_page != "app":
         _file_map = {
@@ -127,7 +171,6 @@ if not (_base_dir / "pages").exists() and (_base_dir / "1_Threshold_and_Cost.py"
             st.set_page_config = _orig_spc
         st.stop()
 
-lang_code, t = render_sidebar_and_get_lang()
 main_pipe, base_pipe, meta = load_artifacts()
 
 default_th = float(meta["cost_assumptions"]["chosen_threshold"])
@@ -136,15 +179,15 @@ if "active_threshold" not in st.session_state:
 active_th = float(st.session_state["active_threshold"])
 
 # ==============================================================================
-# 1. HEADER SECTION WITH EIU UNIVERSITY LOGO
+# 1. HEADER SECTION WITH TRANSLATED EIU UNIVERSITY BANNER
 # ==============================================================================
 header_html = (
     "<div style='display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; "
     "background:#ffffff; border:1.5px solid #cbd5e1; border-radius:16px; padding:18px 26px; margin-bottom:16px; "
     "box-shadow:0 4px 12px rgba(15,23,42,0.04);'>"
     "<div style='flex:1; min-width:280px;'>"
-    "<div style='font-size:0.78rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:4px;'>"
-    "🏛️ Eastern International University (EIU) &bull; Healthcare Decision-Support System"
+    f"<div style='font-size:0.78rem; font-weight:700; color:#1e3a8a; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;'>"
+    f"{_header_badge_txt}"
     "</div>"
     f"<h1 style='font-size:2.05rem; font-weight:800; color:#0f172a; margin:0;'>{t['app_title']}</h1>"
     "</div>"

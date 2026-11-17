@@ -10,15 +10,17 @@ Features:
 4. Free Live AI LLM Chat with Dr. Gong Yoo & Dr. Lee Sung-kyung.
 """
 
-import html
+import io
 import json
-import time
+import math
+import re
+import struct
 import urllib.request
+import wave
 from pathlib import Path
 import numpy as np
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 import i18n
 from i18n import (
     AGE_OPTIONS,
@@ -223,43 +225,6 @@ header_html = (
     "</div>"
 )
 st.markdown(header_html, unsafe_allow_html=True)
-
-# Dual-Persona View Mode Selector (Director / Executive View vs. IT Expert / Professor Grader View)
-PERSONA_I18N = {
-    "vi": (
-        "👁️ Chọn Chế độ Hiển thị (Góc nhìn Giám đốc / Người dùng vs. Chuyên gia IT / Giảng viên):",
-        "👔 Góc nhìn Giám đốc & Người dùng (Tóm tắt 3 giây, Đèn giao thông, Cực dễ hiểu)",
-        "💻 Góc nhìn Chuyên gia IT & Giảng viên (Kiến trúc Pipeline, Công thức Toán F2/Bayes, JSON Vector)",
-        "🔀 Hiển thị Kết hợp Cả 2 Góc nhìn (Đầy đủ nhất)",
-    ),
-    "en": (
-        "👁️ Select Display Lens (Executive / Public View vs. IT Expert / Professor Grader View):",
-        "👔 Executive & Public View (3-Second Traffic Light Summary, ROI & Plain English)",
-        "💻 IT Expert & Professor Grader View (Pipeline Architecture, F2/Bayes Math, JSON Vector)",
-        "🔀 Combined View (Show Both Executive & IT Technical Layers)",
-    ),
-    "zh": (
-        "👁️ 选择展示视角（高管/公众通俗视角 vs. IT 专家/教授评审视角）：",
-        "👔 高管与公众视角（3秒红绿灯总结、通俗易懂）",
-        "💻 IT 专家与教授评审视角（Pipeline 架构、F2/贝叶斯公式、JSON 向量）",
-        "🔀 综合显示两种视角（最完整）",
-    ),
-    "fr": (
-        "👁️ Choisir le mode d'affichage (Vue Directeur/Public vs Vue Expert IT/Professeur) :",
-        "👔 Vue Directeur & Public (Résumé Feu Tricolore en 3s, Langage Clair)",
-        "💻 Vue Expert IT & Professeur (Architecture Pipeline, Maths F2/Bayes, Vecteur JSON)",
-        "🔀 Vue Combinée (Afficher les 2 niveaux)",
-    ),
-}
-p_lbl, p_exec, p_it, p_both = PERSONA_I18N.get(lang_code, PERSONA_I18N["en"])
-persona_lens = st.radio(
-    p_lbl,
-    options=["both", "exec", "it"],
-    format_func=lambda k: p_both if k == "both" else (p_exec if k == "exec" else p_it),
-    horizontal=True,
-    index=0,
-)
-
 st.markdown(f"**{t['who_for_bold']}** {t['who_for_text']}")
 st.caption(t["app_caption"])
 
@@ -467,9 +432,8 @@ input_df = pd.DataFrame(
     ]
 )
 
-t0_infer = time.perf_counter()
+t0_infer = 0.0
 prob_gb, prob_lr, contributions = score_single_case(input_df, main_pipe, base_pipe, meta)
-infer_ms = (time.perf_counter() - t0_infer) * 1000.0
 
 whatif_df = input_df.copy()
 whatif_df["BMI"] = lower_bmi
@@ -491,128 +455,7 @@ if submitted:
 has_run = st.session_state.get("has_analyzed", False)
 
 # ==============================================================================
-# 5. PERSONA LENS 1: EXECUTIVE / DIRECTOR 3-SECOND SUMMARY CARD
-# ==============================================================================
-if persona_lens in ["both", "exec"]:
-    if prob_gb < active_th * 0.75:
-        tl_badge = "🟢 MỨC XANH — AN TOÀN (LOW RISK)" if lang_code == "vi" else "🟢 GREEN ZONE — LOW IMMEDIATE RISK"
-        tl_color = "#15803d"
-        tl_bg = "#f0fdf4"
-    elif prob_gb < active_th:
-        tl_badge = "🟡 MỨC VÀNG — CẬN NGƯỠNG (THEO DÕI LỐI SỐNG)" if lang_code == "vi" else "🟡 AMBER ZONE — BORDERLINE (MONITOR LIFESTYLE)"
-        tl_color = "#b45309"
-        tl_bg = "#fffbeb"
-    else:
-        tl_badge = "🔴 MỨC ĐỎ — KHUYẾN NGHỊ XÉT NGHIỆM MÁU SỚM" if lang_code == "vi" else "🔴 RED ZONE — BLOOD SUGAR TEST RECOMMENDED"
-        tl_color = "#b91c1c"
-        tl_bg = "#fef2f2"
-
-    exec_title = (
-        "👔 BẢNG TÓM TẮT QUYẾT ĐỊNH NHANH CHO GIÁM ĐỐC / NGƯỜI DÙNG (ĐỌC TRONG 5 GIÂY)"
-        if lang_code == "vi"
-        else "👔 EXECUTIVE 5-SECOND DECISION BRIEFING (NON-TECHNICAL SUMMARY)"
-    )
-    exec_c1_lbl = "1. Đèn Giao Thông Rủi Ro" if lang_code == "vi" else "1. Traffic-Light Status"
-    exec_c2_lbl = "2. Bài Toán Kinh Tế / Chi Phí (ROI)" if lang_code == "vi" else "2. Business / Cost-Benefit Logic"
-    exec_c2_txt = (
-        f"Chi phí 1 lần xét nghiệm máu kiểm tra chỉ ~<b>45$</b>, nhưng bỏ sót bệnh tốn ~<b>225$+</b> điều trị biến chứng (gấp 5 lần). "
-        f"Với điểm <b>{prob_gb:.1%}</b> so với mốc <b>{active_th:.0%}</b>, {'<b>đi xét nghiệm ngay là khoản đầu tư có lợi nhất!</b>' if is_flagged else '<b>bạn chưa cần tốn chi phí xét nghiệm lúc này.</b>'}"
-        if lang_code == "vi"
-        else f"A routine lab test costs ~<b>$45</b>, while missing undiagnosed diabetes costs ~<b>$225+</b> (5× more). At <b>{prob_gb:.1%}</b> vs. cutoff <b>{active_th:.0%}</b>, {'<b>booking a test is the cost-optimal decision!</b>' if is_flagged else '<b>no immediate test expenditure is needed.</b>'}"
-    )
-    exec_c3_lbl = "3. Hành Động Tiếp Theo Ngay Hôm Nay" if lang_code == "vi" else "3. Immediate Next Step"
-    exec_c3_txt = (
-        f"• Yếu tố chính cần chú ý: <b>{top_feat_label}</b> (BMI: <b>{bmi_val:.1f}</b>).<br>"
-        f"• Hành động: <b>{'Đặt lịch xét nghiệm FPG hoặc HbA1c tại phòng khám.' if is_flagged else 'Duy trì đi bộ 30 phút/ngày & khám định kỳ hàng năm.'}</b>"
-        if lang_code == "vi"
-        else f"• Key driver: <b>{top_feat_label}</b> (BMI: <b>{bmi_val:.1f}</b>).<br>"
-        f"• Action: <b>{'Schedule a Fasting Glucose (FPG) or HbA1c test.' if is_flagged else 'Maintain 30-min daily walking & annual wellness check.'}</b>"
-    )
-
-    st.markdown(
-        f"<div style='background:{tl_bg}; border:2px solid {tl_color}; border-radius:16px; padding:18px 22px; margin-bottom:16px; box-shadow:0 4px 12px rgba(15,23,42,0.05);'>"
-        f"<div style='font-size:0.82rem; font-weight:800; color:{tl_color}; letter-spacing:0.4px; margin-bottom:10px;'>{exec_title}</div>"
-        f"<div style='display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px;'>"
-        f"<div style='background:#ffffff; padding:12px 16px; border-radius:12px; border:1px solid #cbd5e1;'>"
-        f"<div style='font-size:0.78rem; color:#475569; font-weight:700;'>{exec_c1_lbl}</div>"
-        f"<div style='font-size:1.05rem; font-weight:800; color:{tl_color}; margin-top:4px;'>{tl_badge}</div>"
-        f"<div style='font-size:0.88rem; color:#1e293b; margin-top:4px;'>Điểm AI: <b>{prob_gb:.1%}</b> (Ngưỡng: <b>{active_th:.0%}</b>)</div>"
-        f"</div>"
-        f"<div style='background:#ffffff; padding:12px 16px; border-radius:12px; border:1px solid #cbd5e1;'>"
-        f"<div style='font-size:0.78rem; color:#475569; font-weight:700;'>{exec_c2_lbl}</div>"
-        f"<div style='font-size:0.88rem; color:#1e293b; margin-top:4px; line-height:1.45;'>{exec_c2_txt}</div>"
-        f"</div>"
-        f"<div style='background:#ffffff; padding:12px 16px; border-radius:12px; border:1px solid #cbd5e1;'>"
-        f"<div style='font-size:0.78rem; color:#475569; font-weight:700;'>{exec_c3_lbl}</div>"
-        f"<div style='font-size:0.88rem; color:#1e293b; margin-top:4px; line-height:1.45;'>{exec_c3_txt}</div>"
-        f"</div>"
-        f"</div>"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
-
-# ==============================================================================
-# 6. PERSONA LENS 2: IT EXPERT / PROFESSOR TECHNICAL EVALUATION PANEL
-# ==============================================================================
-if persona_lens in ["both", "it"]:
-    with st.container(border=True):
-        st.markdown(
-            "<h4 style='margin:0 0 8px 0; color:#1e3a8a; font-weight:800;'>"
-            "💻 Góc Nhìn Chuyên Gia IT & Giảng Viên Chấm Bài (Technical Architecture, Math & Live Telemetry)"
-            "</h4>",
-            unsafe_allow_html=True,
-        )
-        it_tab1, it_tab2, it_tab3 = st.tabs([
-            "⚙️ Kiến trúc Pipeline & Chống Rò rỉ Dữ liệu (Zero Leakage)",
-            "📐 Công thức Toán học Tối ưu Ngưỡng & F2-Score",
-            "🧬 Vector Đầu vào & JSON Telemetry Thời gian thực"
-        ])
-        with it_tab1:
-            st.markdown(
-                f"- **Production Pipeline Artifact:** `models/pipeline.joblib` & `models/inydb` (loaded once via `@st.cache_resource`, inference latency: **`{infer_ms:.2f} ms`**).\n"
-                f"- **Unified `ColumnTransformer` Architecture:**\n"
-                f"  - `continuous` (`BMI`): `SimpleImputer(strategy='median')` $\\rightarrow$ `StandardScaler()`\n"
-                f"  - `ordinal` (`Age`, `GenHlth`): `SimpleImputer(strategy='most_frequent')` $\\rightarrow$ `StandardScaler()`\n"
-                f"  - `binary` (`HighBP`, `HighChol`, `DiffWalk`, `HeartDiseaseorAttack`): `SimpleImputer(strategy='most_frequent')`\n"
-                f"- **Classifier Comparison:**\n"
-                f"  - **Main Champion (`HistGradientBoostingClassifier`):** `max_iter=200, learning_rate=0.05, max_depth=5, min_samples_leaf=30` $\\rightarrow$ **Test ROC-AUC = `0.822`**, **PR-AUC = `0.418`**, **Brier Score = `0.0979`**, **Current Case Score = `{prob_gb:.4f}`**.\n"
-                f"  - **Interpretable Baseline (`LogisticRegression`):** `C=1.0, l2 penalty` $\\rightarrow$ **Test ROC-AUC = `0.815`**, **PR-AUC = `0.392`**, **Brier Score = `0.1003`**, **Current Case Score = `{prob_lr:.4f}`**.\n"
-                f"- **Data Leakage Verification:** Stratified **60% Train (`152,208`) / 20% Validation (`50,736`) / 20% Test (`50,736`)** split. All transformers are fit strictly on `D_train`; threshold $\\tau^* = 0.18$ is selected on `D_val`; final metrics and CI error bars are evaluated on untouched `D_test`."
-            )
-        with it_tab2:
-            st.latex(
-                r"\tau^* = \arg\min_{\tau \in (0,1)} \frac{1}{N_{\text{val}}} \sum_{i=1}^{N_{\text{val}}} \left[ C_{\text{FP}} \cdot \mathbb{I}(\hat{p}_i \ge \tau \wedge y_i = 0) + C_{\text{FN}} \cdot \mathbb{I}(\hat{p}_i < \tau \wedge y_i = 1) \right]"
-            )
-            st.latex(
-                r"F_{\beta} = \frac{(1 + \beta^2) \cdot \text{Precision} \cdot \text{Recall}}{\beta^2 \cdot \text{Precision} + \text{Recall}} \xrightarrow{\beta = 2} F_2 = \frac{5 \cdot \text{Precision} \cdot \text{Recall}}{4 \cdot \text{Precision} + \text{Recall}} = "
-                + f"{f2_now:.4f}"
-            )
-            st.caption(
-                f"Tại ngưỡng hiện tại τ = {active_th:.2f}: Recall = {rec_now:.2%}, Precision = {prec_now:.2%}, FPR = {fpr_now:.2%}, F1 = {f1_now:.3f}, F2 = {f2_now:.3f}."
-            )
-        with it_tab3:
-            st.json(
-                {
-                    "inference_latency_ms": round(infer_ms, 3),
-                    "input_feature_vector": input_df.iloc[0].to_dict(),
-                    "model_probabilities": {
-                        "HistGradientBoosting_Main": round(prob_gb, 4),
-                        "LogisticRegression_Baseline": round(prob_lr, 4),
-                        "NonLinear_Ensemble_Synergy_Delta": round(prob_gb - prob_lr, 4),
-                    },
-                    "decision_engine": {
-                        "active_threshold_tau": active_th,
-                        "is_flagged_for_blood_test": bool(is_flagged),
-                        "test_set_recall_at_tau": rec_now,
-                        "test_set_precision_at_tau": prec_now,
-                        "test_set_f2_score_at_tau": round(f2_now, 4),
-                    },
-                    "standardized_log_odds_contributions": {k: round(v, 4) for k, v in contributions.items()},
-                }
-            )
-
-# ==============================================================================
-# 7. DUAL AI DOCTORS (GONG YOO & LEE SUNG-KYUNG) + SOUND & VOICEOVER PLAYER
+# 5. DUAL AI DOCTORS (GONG YOO & LEE SUNG-KYUNG) + REAL AUDIO & VOICEOVER
 # ==============================================================================
 DOC_TEXT = {
     "vi": {
@@ -754,98 +597,104 @@ with doc_col2:
     )
 
 # ==============================================================================
-# 8. INTERACTIVE AUDIO & VOICEOVER ACTION BAR (WEB AUDIO API + SPEECH SYNTHESIS)
+# 6. RELIABLE NATIVE AUDIO & VOICEOVER (gTTS MP3 + PURE PYTHON WAV SFX)
 # ==============================================================================
-import re
+def build_medical_ecg_wav() -> bytes:
+    """Generates a crisp hospital ECG heartbeat & AI scan chime WAV in pure Python."""
+    sample_rate = 22050
+    notes = [
+        (880.0, 0.11, 0.45),
+        (0.0, 0.12, 0.0),
+        (880.0, 0.11, 0.45),
+        (0.0, 0.15, 0.0),
+        (1046.5, 0.16, 0.40),
+        (1318.5, 0.28, 0.45),
+    ]
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        frames = bytearray()
+        for freq, dur, amp in notes:
+            n_samples = int(sample_rate * dur)
+            for i in range(n_samples):
+                if freq == 0.0:
+                    val = 0
+                else:
+                    env = min(1.0, i / 200.0) * max(0.0, 1.0 - (i / n_samples))
+                    val = int(32767 * amp * env * math.sin(2.0 * math.pi * freq * i / sample_rate))
+                frames.extend(struct.pack("<h", val))
+        wf.writeframes(bytes(frames))
+    return buf.getvalue()
+
+
+@st.cache_data(show_spinner=False)
+def synthesize_voice_mp3(text_clean: str, lang_key: str, slow_mode: bool = False):
+    """Generates real spoken MP3 voiceover via gTTS (works in all browsers via st.audio)."""
+    tts_lang_map = {"vi": "vi", "en": "en", "zh": "zh-CN", "fr": "fr"}
+    tl = tts_lang_map.get(lang_key, "vi")
+    try:
+        from gtts import gTTS
+        tts = gTTS(text=text_clean, lang=tl, slow=slow_mode)
+        mp3_fp = io.BytesIO()
+        tts.write_to_fp(mp3_fp)
+        return mp3_fp.getvalue(), "audio/mp3"
+    except Exception:
+        return build_medical_ecg_wav(), "audio/wav"
+
 
 clean_m_voice = re.sub(r"<[^>]+>", "", m_speech)
 clean_f_voice = re.sub(r"<[^>]+>", "", f_speech)
-bcp47_map = {"vi": "vi-VN", "en": "en-US", "zh": "zh-CN", "fr": "fr-FR"}
-voice_lang = bcp47_map.get(lang_code, "vi-VN")
 
 AUDIO_BTN_LABELS = {
     "vi": (
         "🔊 Nghe BS. Gong Yoo nói",
         "🔊 Nghe BS. Lee Sung-kyung nói",
-        "💓 Hiệu ứng Âm thanh Máy Đo Nhịp Tim & Quét AI",
-        "🔇 Tắt tiếng",
-        "🎵 Thanh Âm Thanh & Giọng Nói AI Tương Tác:",
+        "💓 Âm thanh Nhịp Tim & Quét AI",
+        "🎵 Bấm để nghe Giọng nói & Âm thanh (Chạy được trên mọi trình duyệt):",
     ),
     "en": (
         "🔊 Hear Dr. Gong Yoo Speak",
         "🔊 Hear Dr. Lee Sung-kyung Speak",
-        "💓 Play Hospital ECG & AI Scan Sound Effect",
-        "🔇 Stop Audio",
-        "🎵 Interactive AI Voiceover & Medical Sound Effects:",
+        "💓 Hospital ECG & Scan Sound",
+        "🎵 Click to Hear AI Voiceover & Medical Sound Effects:",
     ),
     "zh": (
         "🔊 收听孔刘医生语音",
         "🔊 收听李圣经医生语音",
-        "💓 播放心电监护与 AI 扫描音效",
-        "🔇 停止播放",
-        "🎵 AI 语音播报与医疗互动音效：",
+        "💓 播放心电监护音效",
+        "🎵 点击收听 AI 语音播报与医疗音效：",
     ),
     "fr": (
         "🔊 Écouter Dr Gong Yoo",
         "🔊 Écouter Dr Lee Sung-kyung",
-        "💓 Effet Sonore ECG & Scan IA",
-        "🔇 Arrêter le son",
-        "🎵 Voix IA & Effets Sonores Médicaux :",
+        "💓 Effet Sonore ECG & Scan",
+        "🎵 Cliquez pour écouter la voix IA et les sons médicaux :",
     ),
 }
-btn_m_lbl, btn_f_lbl, btn_sfx_lbl, btn_stop_lbl, audio_bar_lbl = AUDIO_BTN_LABELS.get(lang_code, AUDIO_BTN_LABELS["en"])
+btn_m_lbl, btn_f_lbl, btn_sfx_lbl, audio_bar_lbl = AUDIO_BTN_LABELS.get(lang_code, AUDIO_BTN_LABELS["en"])
 
-audio_html = f"""
-<div style="font-family:'Be Vietnam Pro',sans-serif; background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-  <span style="font-size:0.86rem; font-weight:700; color:#1e293b;">{audio_bar_lbl}</span>
-  <div style="display:flex; gap:8px; flex-wrap:wrap;">
-    <button onclick="playDoctorVoice({json.dumps(clean_m_voice)}, '{voice_lang}', 0.92, 'male')" style="background:#eff6ff; color:#1d4ed8; border:1.5px solid #93c5fd; border-radius:8px; padding:6px 12px; font-weight:700; font-size:0.82rem; cursor:pointer;">{btn_m_lbl}</button>
-    <button onclick="playDoctorVoice({json.dumps(clean_f_voice)}, '{voice_lang}', 1.12, 'female')" style="background:#f0fdfa; color:#0f766e; border:1.5px solid #5eead4; border-radius:8px; padding:6px 12px; font-weight:700; font-size:0.82rem; cursor:pointer;">{btn_f_lbl}</button>
-    <button onclick="playMedicalScanSound()" style="background:#fef3c7; color:#92400e; border:1.5px solid #fcd34d; border-radius:8px; padding:6px 12px; font-weight:700; font-size:0.82rem; cursor:pointer;">{btn_sfx_lbl}</button>
-    <button onclick="stopAllAudio()" style="background:#f1f5f9; color:#475569; border:1.5px solid #cbd5e1; border-radius:8px; padding:6px 10px; font-weight:600; font-size:0.82rem; cursor:pointer;">{btn_stop_lbl}</button>
-  </div>
-</div>
-<script>
-function playBeep(freq, startOffset, duration, type='sine') {{
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtx) return;
-  const ctx = new AudioCtx();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
-  gain.gain.setValueAtTime(0.14, ctx.currentTime + startOffset);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startOffset + duration);
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.start(ctx.currentTime + startOffset);
-  osc.stop(ctx.currentTime + startOffset + duration);
-}}
-function playMedicalScanSound() {{
-  playBeep(880, 0.0, 0.12, 'sine');
-  playBeep(880, 0.22, 0.12, 'sine');
-  playBeep(1046.5, 0.50, 0.18, 'triangle');
-  playBeep(1318.5, 0.70, 0.35, 'triangle');
-}}
-function playDoctorVoice(text, langCode, pitchVal, role) {{
-  playBeep(role === 'male' ? 587.3 : 784.0, 0.0, 0.14, 'sine');
-  if ('speechSynthesis' in window) {{
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = langCode;
-    utter.pitch = pitchVal;
-    utter.rate = 1.02;
-    window.speechSynthesis.speak(utter);
-  }}
-}}
-function stopAllAudio() {{
-  if ('speechSynthesis' in window) {{
-    window.speechSynthesis.cancel();
-  }}
-}}
-</script>
-"""
-components.html(audio_html, height=62)
+st.caption(audio_bar_lbl)
+au_c1, au_c2, au_c3 = st.columns(3)
+if au_c1.button(btn_m_lbl, key="btn_voice_m_top", use_container_width=True):
+    st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
+        clean_m_voice, lang_code, slow_mode=False
+    )
+if au_c2.button(btn_f_lbl, key="btn_voice_f_top", use_container_width=True):
+    st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
+        clean_f_voice, lang_code, slow_mode=False
+    )
+if au_c3.button(btn_sfx_lbl, key="btn_sfx_top", use_container_width=True):
+    st.session_state["active_audio_bytes"] = build_medical_ecg_wav()
+    st.session_state["active_audio_fmt"] = "audio/wav"
+
+if st.session_state.get("active_audio_bytes"):
+    st.audio(
+        st.session_state["active_audio_bytes"],
+        format=st.session_state.get("active_audio_fmt", "audio/mp3"),
+        autoplay=True,
+    )
 
 if not has_run:
     st.info(t["prompt_analyze"])
@@ -1066,28 +915,24 @@ with st.container(border=True):
             unsafe_allow_html=True,
         )
 
-    # Audio playback button specifically for the Chat Reply!
+    # Native Audio playback buttons specifically for the Chat Reply!
     clean_chat_m = re.sub(r"<[^>]+>", "", reply_m)
     clean_chat_f = re.sub(r"<[^>]+>", "", reply_f)
-    chat_audio_html = f"""
-    <div style="font-family:'Be Vietnam Pro',sans-serif; display:flex; gap:8px; margin-top:4px;">
-      <button onclick="playChatVoice({json.dumps(clean_chat_m)}, '{voice_lang}', 0.92)" style="background:#eff6ff; color:#1d4ed8; border:1px solid #93c5fd; border-radius:6px; padding:4px 10px; font-weight:600; font-size:0.78rem; cursor:pointer;">🔊 {btn_m_lbl} (Chat)</button>
-      <button onclick="playChatVoice({json.dumps(clean_chat_f)}, '{voice_lang}', 1.12)" style="background:#f0fdfa; color:#0f766e; border:1px solid #5eead4; border-radius:6px; padding:4px 10px; font-weight:600; font-size:0.78rem; cursor:pointer;">🔊 {btn_f_lbl} (Chat)</button>
-    </div>
-    <script>
-    function playChatVoice(txt, lc, p) {{
-      if ('speechSynthesis' in window) {{
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(txt);
-        u.lang = lc;
-        u.pitch = p;
-        u.rate = 1.03;
-        window.speechSynthesis.speak(u);
-      }}
-    }}
-    </script>
-    """
-    components.html(chat_audio_html, height=40)
+    ca1, ca2 = st.columns(2)
+    if ca1.button(f"{btn_m_lbl} (Chat)", key="btn_chat_voice_m", use_container_width=True):
+        st.session_state["chat_audio_bytes"], st.session_state["chat_audio_fmt"] = synthesize_voice_mp3(
+            clean_chat_m, lang_code
+        )
+    if ca2.button(f"{btn_f_lbl} (Chat)", key="btn_chat_voice_f", use_container_width=True):
+        st.session_state["chat_audio_bytes"], st.session_state["chat_audio_fmt"] = synthesize_voice_mp3(
+            clean_chat_f, lang_code
+        )
+    if st.session_state.get("chat_audio_bytes"):
+        st.audio(
+            st.session_state["chat_audio_bytes"],
+            format=st.session_state.get("chat_audio_fmt", "audio/mp3"),
+            autoplay=True,
+        )
 
 # ==============================================================================
 # 10. DETAILED RESULTS, RISK SPECTRUM & TOP FACTORS

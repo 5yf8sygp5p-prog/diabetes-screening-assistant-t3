@@ -1,0 +1,1195 @@
+{
+  "project_topic": "T3: Diabetes Risk Screening (CDC BRFSS 2015)",
+  "user_decision_statement": "An adult answering questions at home uses the app to decide whether to get a blood sugar test.",
+  "dataset_summary": {
+    "source": "CDC Behavioral Risk Factor Surveillance System (BRFSS) 2015 \u2014 diabetes_binary_health_indicators_BRFSS2015.csv",
+    "n_raw": 253680,
+    "n_duplicates_removed": 0,
+    "n_clean": 253680,
+    "prevalence_raw": 0.1393,
+    "prevalence_clean": 0.1393,
+    "n_train": 152208,
+    "n_val": 50736,
+    "n_test": 50736
+  },
+  "feature_list": [
+    "Age",
+    "BMI",
+    "HighBP",
+    "HighChol",
+    "GenHlth",
+    "DiffWalk",
+    "HeartDiseaseorAttack"
+  ],
+  "cost_assumptions": {
+    "default_cost_ratio_fn_to_fp": 5.0,
+    "chosen_threshold": 0.18,
+    "cost_false_positive_usd": 45.0,
+    "cost_false_negative_usd": 225.0
+  },
+  "app_model_test_metrics": {
+    "model": "Histogram Gradient Boosting (minimal)",
+    "questions": 7,
+    "threshold": 0.18,
+    "pr_auc_train": 0.435,
+    "pr_auc_test": 0.418,
+    "roc_auc_test": 0.822,
+    "brier_test": 0.0979,
+    "recall": 0.705,
+    "precision": 0.336,
+    "fpr": 0.225,
+    "f1": 0.456
+  },
+  "baseline_model_test_metrics": {
+    "model": "Logistic Regression (minimal)",
+    "questions": 7,
+    "threshold": 0.14,
+    "pr_auc_train": 0.398,
+    "pr_auc_test": 0.392,
+    "roc_auc_test": 0.815,
+    "brier_test": 0.1003,
+    "recall": 0.758,
+    "precision": 0.304,
+    "fpr": 0.281,
+    "f1": 0.434
+  },
+  "models_compared": [
+    {
+      "model": "Logistic Regression (minimal)",
+      "questions": 7,
+      "threshold": 0.14,
+      "pr_auc_train": 0.398,
+      "pr_auc_test": 0.392,
+      "roc_auc_test": 0.815,
+      "brier_test": 0.1003,
+      "recall": 0.758,
+      "precision": 0.304,
+      "fpr": 0.281,
+      "f1": 0.434
+    },
+    {
+      "model": "Logistic Regression (full)",
+      "questions": 10,
+      "threshold": 0.14,
+      "pr_auc_train": 0.399,
+      "pr_auc_test": 0.394,
+      "roc_auc_test": 0.816,
+      "brier_test": 0.1002,
+      "recall": 0.759,
+      "precision": 0.306,
+      "fpr": 0.279,
+      "f1": 0.436
+    },
+    {
+      "model": "Histogram Gradient Boosting (minimal)",
+      "questions": 7,
+      "threshold": 0.18,
+      "pr_auc_train": 0.435,
+      "pr_auc_test": 0.418,
+      "roc_auc_test": 0.822,
+      "brier_test": 0.0979,
+      "recall": 0.705,
+      "precision": 0.336,
+      "fpr": 0.225,
+      "f1": 0.456
+    },
+    {
+      "model": "Histogram Gradient Boosting (full)",
+      "questions": 10,
+      "threshold": 0.14,
+      "pr_auc_train": 0.441,
+      "pr_auc_test": 0.418,
+      "roc_auc_test": 0.823,
+      "brier_test": 0.0978,
+      "recall": 0.78,
+      "precision": 0.302,
+      "fpr": 0.292,
+      "f1": 0.436
+    }
+  ],
+  "threshold_curve": [
+    {
+      "threshold": 0.02,
+      "val_fp_rate_per_person": 0.63438,
+      "val_fn_rate_per_person": 0.00219,
+      "test_recall": 0.9849,
+      "test_precision": 0.1773,
+      "test_fpr": 0.7398,
+      "test_flagged": 0.774,
+      "per_1000": {
+        "tp": 137,
+        "fn": 2,
+        "fp": 637,
+        "tn": 224
+      }
+    },
+    {
+      "threshold": 0.04,
+      "val_fp_rate_per_person": 0.52456,
+      "val_fn_rate_per_person": 0.0056,
+      "test_recall": 0.9607,
+      "test_precision": 0.2023,
+      "test_fpr": 0.6132,
+      "test_flagged": 0.6616,
+      "per_1000": {
+        "tp": 134,
+        "fn": 5,
+        "fp": 528,
+        "tn": 333
+      }
+    },
+    {
+      "threshold": 0.06,
+      "val_fp_rate_per_person": 0.4364,
+      "val_fn_rate_per_person": 0.0093,
+      "test_recall": 0.9281,
+      "test_precision": 0.2282,
+      "test_fpr": 0.5081,
+      "test_flagged": 0.5666,
+      "per_1000": {
+        "tp": 129,
+        "fn": 10,
+        "fp": 437,
+        "tn": 423
+      }
+    },
+    {
+      "threshold": 0.08,
+      "val_fp_rate_per_person": 0.37528,
+      "val_fn_rate_per_person": 0.01419,
+      "test_recall": 0.8962,
+      "test_precision": 0.2489,
+      "test_fpr": 0.4378,
+      "test_flagged": 0.5017,
+      "per_1000": {
+        "tp": 125,
+        "fn": 14,
+        "fp": 377,
+        "tn": 484
+      }
+    },
+    {
+      "threshold": 0.1,
+      "val_fp_rate_per_person": 0.33134,
+      "val_fn_rate_per_person": 0.01845,
+      "test_recall": 0.8658,
+      "test_precision": 0.265,
+      "test_fpr": 0.3887,
+      "test_flagged": 0.4552,
+      "per_1000": {
+        "tp": 121,
+        "fn": 19,
+        "fp": 335,
+        "tn": 526
+      }
+    },
+    {
+      "threshold": 0.12,
+      "val_fp_rate_per_person": 0.28688,
+      "val_fn_rate_per_person": 0.02416,
+      "test_recall": 0.8219,
+      "test_precision": 0.283,
+      "test_fpr": 0.3371,
+      "test_flagged": 0.4046,
+      "per_1000": {
+        "tp": 115,
+        "fn": 25,
+        "fp": 290,
+        "tn": 571
+      }
+    },
+    {
+      "threshold": 0.14,
+      "val_fp_rate_per_person": 0.2499,
+      "val_fn_rate_per_person": 0.02994,
+      "test_recall": 0.7819,
+      "test_precision": 0.3023,
+      "test_fpr": 0.2921,
+      "test_flagged": 0.3604,
+      "per_1000": {
+        "tp": 109,
+        "fn": 30,
+        "fp": 251,
+        "tn": 609
+      }
+    },
+    {
+      "threshold": 0.16,
+      "val_fp_rate_per_person": 0.21978,
+      "val_fn_rate_per_person": 0.03564,
+      "test_recall": 0.7434,
+      "test_precision": 0.3198,
+      "test_fpr": 0.256,
+      "test_flagged": 0.3239,
+      "per_1000": {
+        "tp": 104,
+        "fn": 36,
+        "fp": 220,
+        "tn": 640
+      }
+    },
+    {
+      "threshold": 0.18,
+      "val_fp_rate_per_person": 0.19351,
+      "val_fn_rate_per_person": 0.04086,
+      "test_recall": 0.7052,
+      "test_precision": 0.3364,
+      "test_fpr": 0.2252,
+      "test_flagged": 0.2921,
+      "per_1000": {
+        "tp": 98,
+        "fn": 41,
+        "fp": 194,
+        "tn": 667
+      }
+    },
+    {
+      "threshold": 0.2,
+      "val_fp_rate_per_person": 0.17096,
+      "val_fn_rate_per_person": 0.04681,
+      "test_recall": 0.6652,
+      "test_precision": 0.3511,
+      "test_fpr": 0.199,
+      "test_flagged": 0.264,
+      "per_1000": {
+        "tp": 93,
+        "fn": 47,
+        "fp": 171,
+        "tn": 689
+      }
+    },
+    {
+      "threshold": 0.22,
+      "val_fp_rate_per_person": 0.15052,
+      "val_fn_rate_per_person": 0.05245,
+      "test_recall": 0.6302,
+      "test_precision": 0.3657,
+      "test_fpr": 0.177,
+      "test_flagged": 0.2401,
+      "per_1000": {
+        "tp": 88,
+        "fn": 52,
+        "fp": 152,
+        "tn": 708
+      }
+    },
+    {
+      "threshold": 0.24,
+      "val_fp_rate_per_person": 0.13077,
+      "val_fn_rate_per_person": 0.05844,
+      "test_recall": 0.5864,
+      "test_precision": 0.3817,
+      "test_fpr": 0.1538,
+      "test_flagged": 0.214,
+      "per_1000": {
+        "tp": 82,
+        "fn": 58,
+        "fp": 132,
+        "tn": 728
+      }
+    },
+    {
+      "threshold": 0.26,
+      "val_fp_rate_per_person": 0.11426,
+      "val_fn_rate_per_person": 0.06394,
+      "test_recall": 0.5486,
+      "test_precision": 0.3984,
+      "test_fpr": 0.1341,
+      "test_flagged": 0.1919,
+      "per_1000": {
+        "tp": 76,
+        "fn": 63,
+        "fp": 115,
+        "tn": 745
+      }
+    },
+    {
+      "threshold": 0.28,
+      "val_fp_rate_per_person": 0.10086,
+      "val_fn_rate_per_person": 0.06948,
+      "test_recall": 0.5114,
+      "test_precision": 0.4123,
+      "test_fpr": 0.118,
+      "test_flagged": 0.1728,
+      "per_1000": {
+        "tp": 71,
+        "fn": 68,
+        "fp": 102,
+        "tn": 759
+      }
+    },
+    {
+      "threshold": 0.3,
+      "val_fp_rate_per_person": 0.08895,
+      "val_fn_rate_per_person": 0.07415,
+      "test_recall": 0.4752,
+      "test_precision": 0.4251,
+      "test_fpr": 0.104,
+      "test_flagged": 0.1557,
+      "per_1000": {
+        "tp": 66,
+        "fn": 73,
+        "fp": 90,
+        "tn": 771
+      }
+    },
+    {
+      "threshold": 0.32,
+      "val_fp_rate_per_person": 0.07689,
+      "val_fn_rate_per_person": 0.07933,
+      "test_recall": 0.4373,
+      "test_precision": 0.4402,
+      "test_fpr": 0.09,
+      "test_flagged": 0.1384,
+      "per_1000": {
+        "tp": 61,
+        "fn": 78,
+        "fp": 77,
+        "tn": 783
+      }
+    },
+    {
+      "threshold": 0.34,
+      "val_fp_rate_per_person": 0.06465,
+      "val_fn_rate_per_person": 0.08491,
+      "test_recall": 0.3916,
+      "test_precision": 0.4553,
+      "test_fpr": 0.0758,
+      "test_flagged": 0.1198,
+      "per_1000": {
+        "tp": 55,
+        "fn": 85,
+        "fp": 65,
+        "tn": 795
+      }
+    },
+    {
+      "threshold": 0.36,
+      "val_fp_rate_per_person": 0.05529,
+      "val_fn_rate_per_person": 0.08978,
+      "test_recall": 0.3535,
+      "test_precision": 0.4717,
+      "test_fpr": 0.0641,
+      "test_flagged": 0.1044,
+      "per_1000": {
+        "tp": 49,
+        "fn": 90,
+        "fp": 55,
+        "tn": 806
+      }
+    },
+    {
+      "threshold": 0.38,
+      "val_fp_rate_per_person": 0.04813,
+      "val_fn_rate_per_person": 0.09465,
+      "test_recall": 0.3227,
+      "test_precision": 0.4866,
+      "test_fpr": 0.0551,
+      "test_flagged": 0.0924,
+      "per_1000": {
+        "tp": 45,
+        "fn": 94,
+        "fp": 47,
+        "tn": 813
+      }
+    },
+    {
+      "threshold": 0.4,
+      "val_fp_rate_per_person": 0.04111,
+      "val_fn_rate_per_person": 0.09948,
+      "test_recall": 0.2913,
+      "test_precision": 0.5022,
+      "test_fpr": 0.0467,
+      "test_flagged": 0.0808,
+      "per_1000": {
+        "tp": 41,
+        "fn": 99,
+        "fp": 40,
+        "tn": 820
+      }
+    },
+    {
+      "threshold": 0.42,
+      "val_fp_rate_per_person": 0.03583,
+      "val_fn_rate_per_person": 0.10265,
+      "test_recall": 0.2648,
+      "test_precision": 0.5166,
+      "test_fpr": 0.0401,
+      "test_flagged": 0.0714,
+      "per_1000": {
+        "tp": 37,
+        "fn": 102,
+        "fp": 35,
+        "tn": 826
+      }
+    },
+    {
+      "threshold": 0.44,
+      "val_fp_rate_per_person": 0.02864,
+      "val_fn_rate_per_person": 0.10766,
+      "test_recall": 0.2255,
+      "test_precision": 0.5304,
+      "test_fpr": 0.0323,
+      "test_flagged": 0.0592,
+      "per_1000": {
+        "tp": 31,
+        "fn": 108,
+        "fp": 28,
+        "tn": 833
+      }
+    },
+    {
+      "threshold": 0.46,
+      "val_fp_rate_per_person": 0.02196,
+      "val_fn_rate_per_person": 0.11235,
+      "test_recall": 0.1879,
+      "test_precision": 0.5536,
+      "test_fpr": 0.0245,
+      "test_flagged": 0.0473,
+      "per_1000": {
+        "tp": 26,
+        "fn": 113,
+        "fp": 21,
+        "tn": 840
+      }
+    },
+    {
+      "threshold": 0.48,
+      "val_fp_rate_per_person": 0.01845,
+      "val_fn_rate_per_person": 0.1158,
+      "test_recall": 0.1597,
+      "test_precision": 0.5592,
+      "test_fpr": 0.0204,
+      "test_flagged": 0.0398,
+      "per_1000": {
+        "tp": 22,
+        "fn": 117,
+        "fp": 18,
+        "tn": 843
+      }
+    },
+    {
+      "threshold": 0.5,
+      "val_fp_rate_per_person": 0.01425,
+      "val_fn_rate_per_person": 0.11928,
+      "test_recall": 0.1324,
+      "test_precision": 0.5764,
+      "test_fpr": 0.0158,
+      "test_flagged": 0.032,
+      "per_1000": {
+        "tp": 18,
+        "fn": 121,
+        "fp": 14,
+        "tn": 847
+      }
+    },
+    {
+      "threshold": 0.52,
+      "val_fp_rate_per_person": 0.01143,
+      "val_fn_rate_per_person": 0.12224,
+      "test_recall": 0.1156,
+      "test_precision": 0.5912,
+      "test_fpr": 0.0129,
+      "test_flagged": 0.0272,
+      "per_1000": {
+        "tp": 16,
+        "fn": 123,
+        "fp": 11,
+        "tn": 850
+      }
+    },
+    {
+      "threshold": 0.54,
+      "val_fp_rate_per_person": 0.00922,
+      "val_fn_rate_per_person": 0.12451,
+      "test_recall": 0.0989,
+      "test_precision": 0.5874,
+      "test_fpr": 0.0112,
+      "test_flagged": 0.0235,
+      "per_1000": {
+        "tp": 14,
+        "fn": 126,
+        "fp": 10,
+        "tn": 851
+      }
+    },
+    {
+      "threshold": 0.56,
+      "val_fp_rate_per_person": 0.00782,
+      "val_fn_rate_per_person": 0.12626,
+      "test_recall": 0.085,
+      "test_precision": 0.5974,
+      "test_fpr": 0.0093,
+      "test_flagged": 0.0198,
+      "per_1000": {
+        "tp": 12,
+        "fn": 127,
+        "fp": 8,
+        "tn": 853
+      }
+    },
+    {
+      "threshold": 0.58,
+      "val_fp_rate_per_person": 0.00568,
+      "val_fn_rate_per_person": 0.12888,
+      "test_recall": 0.0661,
+      "test_precision": 0.6121,
+      "test_fpr": 0.0068,
+      "test_flagged": 0.015,
+      "per_1000": {
+        "tp": 9,
+        "fn": 130,
+        "fp": 6,
+        "tn": 855
+      }
+    },
+    {
+      "threshold": 0.6,
+      "val_fp_rate_per_person": 0.00428,
+      "val_fn_rate_per_person": 0.13074,
+      "test_recall": 0.0521,
+      "test_precision": 0.6334,
+      "test_fpr": 0.0049,
+      "test_flagged": 0.0115,
+      "per_1000": {
+        "tp": 7,
+        "fn": 132,
+        "fp": 4,
+        "tn": 856
+      }
+    },
+    {
+      "threshold": 0.62,
+      "val_fp_rate_per_person": 0.00272,
+      "val_fn_rate_per_person": 0.13257,
+      "test_recall": 0.0388,
+      "test_precision": 0.6343,
+      "test_fpr": 0.0036,
+      "test_flagged": 0.0085,
+      "per_1000": {
+        "tp": 5,
+        "fn": 134,
+        "fp": 3,
+        "tn": 858
+      }
+    },
+    {
+      "threshold": 0.64,
+      "val_fp_rate_per_person": 0.00197,
+      "val_fn_rate_per_person": 0.13448,
+      "test_recall": 0.029,
+      "test_precision": 0.6529,
+      "test_fpr": 0.0025,
+      "test_flagged": 0.0062,
+      "per_1000": {
+        "tp": 4,
+        "fn": 135,
+        "fp": 2,
+        "tn": 859
+      }
+    },
+    {
+      "threshold": 0.66,
+      "val_fp_rate_per_person": 0.00134,
+      "val_fn_rate_per_person": 0.1361,
+      "test_recall": 0.0209,
+      "test_precision": 0.6667,
+      "test_fpr": 0.0017,
+      "test_flagged": 0.0044,
+      "per_1000": {
+        "tp": 3,
+        "fn": 136,
+        "fp": 1,
+        "tn": 859
+      }
+    },
+    {
+      "threshold": 0.68,
+      "val_fp_rate_per_person": 0.00095,
+      "val_fn_rate_per_person": 0.137,
+      "test_recall": 0.0134,
+      "test_precision": 0.709,
+      "test_fpr": 0.0009,
+      "test_flagged": 0.0026,
+      "per_1000": {
+        "tp": 2,
+        "fn": 137,
+        "fp": 1,
+        "tn": 860
+      }
+    },
+    {
+      "threshold": 0.7,
+      "val_fp_rate_per_person": 0.00045,
+      "val_fn_rate_per_person": 0.13783,
+      "test_recall": 0.0083,
+      "test_precision": 0.686,
+      "test_fpr": 0.0006,
+      "test_flagged": 0.0017,
+      "per_1000": {
+        "tp": 1,
+        "fn": 138,
+        "fp": 1,
+        "tn": 860
+      }
+    },
+    {
+      "threshold": 0.72,
+      "val_fp_rate_per_person": 0.00016,
+      "val_fn_rate_per_person": 0.13844,
+      "test_recall": 0.0033,
+      "test_precision": 0.6216,
+      "test_fpr": 0.0003,
+      "test_flagged": 0.0007,
+      "per_1000": {
+        "tp": 0,
+        "fn": 139,
+        "fp": 0,
+        "tn": 860
+      }
+    },
+    {
+      "threshold": 0.74,
+      "val_fp_rate_per_person": 4e-05,
+      "val_fn_rate_per_person": 0.13895,
+      "test_recall": 0.0017,
+      "test_precision": 0.75,
+      "test_fpr": 0.0001,
+      "test_flagged": 0.0003,
+      "per_1000": {
+        "tp": 0,
+        "fn": 139,
+        "fp": 0,
+        "tn": 861
+      }
+    },
+    {
+      "threshold": 0.76,
+      "val_fp_rate_per_person": 0.0,
+      "val_fn_rate_per_person": 0.13921,
+      "test_recall": 0.0001,
+      "test_precision": 0.5,
+      "test_fpr": 0.0,
+      "test_flagged": 0.0,
+      "per_1000": {
+        "tp": 0,
+        "fn": 139,
+        "fp": 0,
+        "tn": 861
+      }
+    },
+    {
+      "threshold": 0.78,
+      "val_fp_rate_per_person": 0.0,
+      "val_fn_rate_per_person": 0.13923,
+      "test_recall": 0.0,
+      "test_precision": 0.0,
+      "test_fpr": 0.0,
+      "test_flagged": 0.0,
+      "per_1000": {
+        "tp": 0,
+        "fn": 139,
+        "fp": 0,
+        "tn": 861
+      }
+    },
+    {
+      "threshold": 0.8,
+      "val_fp_rate_per_person": 0.0,
+      "val_fn_rate_per_person": 0.13933,
+      "test_recall": 0.0,
+      "test_precision": 0.0,
+      "test_fpr": 0.0,
+      "test_flagged": 0.0,
+      "per_1000": {
+        "tp": 0,
+        "fn": 139,
+        "fp": 0,
+        "tn": 861
+      }
+    }
+  ],
+  "permutation_importance": [
+    {
+      "feature": "BMI",
+      "importance_mean": 0.0905,
+      "importance_std": 0.0127
+    },
+    {
+      "feature": "GenHlth",
+      "importance_mean": 0.0891,
+      "importance_std": 0.0064
+    },
+    {
+      "feature": "HighChol",
+      "importance_mean": 0.0395,
+      "importance_std": 0.0036
+    },
+    {
+      "feature": "Age",
+      "importance_mean": 0.0356,
+      "importance_std": 0.0032
+    },
+    {
+      "feature": "HighBP",
+      "importance_mean": 0.0328,
+      "importance_std": 0.0024
+    },
+    {
+      "feature": "HeartDiseaseorAttack",
+      "importance_mean": 0.0039,
+      "importance_std": 0.0009
+    },
+    {
+      "feature": "DiffWalk",
+      "importance_mean": 0.0035,
+      "importance_std": 0.0007
+    }
+  ],
+  "odds_ratios": [
+    {
+      "feature": "HighBP",
+      "odds_ratio": 2.2,
+      "coef_raw": 0.7885
+    },
+    {
+      "feature": "HighChol",
+      "odds_ratio": 1.81,
+      "coef_raw": 0.594
+    },
+    {
+      "feature": "GenHlth",
+      "odds_ratio": 1.7,
+      "coef_raw": 0.5314
+    },
+    {
+      "feature": "HeartDiseaseorAttack",
+      "odds_ratio": 1.36,
+      "coef_raw": 0.3081
+    },
+    {
+      "feature": "Age",
+      "odds_ratio": 1.14,
+      "coef_raw": 0.1327
+    },
+    {
+      "feature": "DiffWalk",
+      "odds_ratio": 1.13,
+      "coef_raw": 0.1206
+    },
+    {
+      "feature": "BMI",
+      "odds_ratio": 1.06,
+      "coef_raw": 0.0623
+    }
+  ],
+  "explainability_reference": {
+    "logreg_intercept": -3.0132,
+    "feature_weights": {
+      "BMI": 0.4123,
+      "Age": 0.4049,
+      "GenHlth": 0.568,
+      "HighBP": 0.79,
+      "HighChol": 0.5939,
+      "DiffWalk": 0.12,
+      "HeartDiseaseorAttack": 0.3064
+    },
+    "feature_means": {
+      "BMI": 28.3783,
+      "Age": 8.0335,
+      "GenHlth": 2.5109,
+      "HighBP": 0.4296,
+      "HighChol": 0.4243,
+      "DiffWalk": 0.1679,
+      "HeartDiseaseorAttack": 0.0943
+    },
+    "feature_stds": {
+      "BMI": 6.6175,
+      "Age": 3.049,
+      "GenHlth": 1.0685,
+      "HighBP": 1.0,
+      "HighChol": 1.0,
+      "DiffWalk": 1.0,
+      "HeartDiseaseorAttack": 1.0
+    }
+  },
+  "health_equity": {
+    "threshold": 0.18,
+    "app_model": {
+      "Income": [
+        {
+          "group": "Low (< $25k)",
+          "n": 11573,
+          "prevalence": 0.2302,
+          "recall": 0.7879,
+          "recall_ci": [
+            0.772,
+            0.803
+          ],
+          "fnr": 0.2121,
+          "fnr_ci": [
+            0.197,
+            0.228
+          ],
+          "fpr": 0.3723,
+          "fpr_ci": [
+            0.3623,
+            0.3824
+          ],
+          "precision": 0.3876,
+          "precision_ci": [
+            0.3747,
+            0.4006
+          ],
+          "flagged": 0.468
+        },
+        {
+          "group": "Middle ($25k\u2013$75k)",
+          "n": 21139,
+          "prevalence": 0.14,
+          "recall": 0.7053,
+          "recall_ci": [
+            0.6886,
+            0.7215
+          ],
+          "fnr": 0.2947,
+          "fnr_ci": [
+            0.2785,
+            0.3114
+          ],
+          "fpr": 0.2424,
+          "fpr_ci": [
+            0.2362,
+            0.2486
+          ],
+          "precision": 0.3214,
+          "precision_ci": [
+            0.3102,
+            0.3329
+          ],
+          "flagged": 0.3072
+        },
+        {
+          "group": "High ($75k+)",
+          "n": 18024,
+          "prevalence": 0.0802,
+          "recall": 0.5526,
+          "recall_ci": [
+            0.5268,
+            0.578
+          ],
+          "fnr": 0.4474,
+          "fnr_ci": [
+            0.422,
+            0.4732
+          ],
+          "fpr": 0.1273,
+          "fpr_ci": [
+            0.1223,
+            0.1325
+          ],
+          "precision": 0.2746,
+          "precision_ci": [
+            0.2587,
+            0.2911
+          ],
+          "flagged": 0.1615
+        }
+      ],
+      "Education": [
+        {
+          "group": "Less than high school",
+          "n": 2749,
+          "prevalence": 0.2626,
+          "recall": 0.8075,
+          "recall_ci": [
+            0.7771,
+            0.8346
+          ],
+          "fnr": 0.1925,
+          "fnr_ci": [
+            0.1654,
+            0.2229
+          ],
+          "fpr": 0.446,
+          "fpr_ci": [
+            0.4245,
+            0.4677
+          ],
+          "precision": 0.3921,
+          "precision_ci": [
+            0.3676,
+            0.4171
+          ],
+          "flagged": 0.5409
+        },
+        {
+          "group": "High school graduate",
+          "n": 12576,
+          "prevalence": 0.1802,
+          "recall": 0.748,
+          "recall_ci": [
+            0.7297,
+            0.7655
+          ],
+          "fnr": 0.252,
+          "fnr_ci": [
+            0.2345,
+            0.2703
+          ],
+          "fpr": 0.3034,
+          "fpr_ci": [
+            0.2946,
+            0.3123
+          ],
+          "precision": 0.3514,
+          "precision_ci": [
+            0.3381,
+            0.365
+          ],
+          "flagged": 0.3835
+        },
+        {
+          "group": "Some college",
+          "n": 13847,
+          "prevalence": 0.1426,
+          "recall": 0.7102,
+          "recall_ci": [
+            0.6898,
+            0.7298
+          ],
+          "fnr": 0.2898,
+          "fnr_ci": [
+            0.2702,
+            0.3102
+          ],
+          "fpr": 0.2417,
+          "fpr_ci": [
+            0.2341,
+            0.2495
+          ],
+          "precision": 0.3282,
+          "precision_ci": [
+            0.3143,
+            0.3424
+          ],
+          "flagged": 0.3085
+        },
+        {
+          "group": "College graduate",
+          "n": 21564,
+          "prevalence": 0.0977,
+          "recall": 0.6194,
+          "recall_ci": [
+            0.5984,
+            0.6399
+          ],
+          "fnr": 0.3806,
+          "fnr_ci": [
+            0.3601,
+            0.4016
+          ],
+          "fpr": 0.1507,
+          "fpr_ci": [
+            0.1457,
+            0.1558
+          ],
+          "precision": 0.308,
+          "precision_ci": [
+            0.2943,
+            0.3221
+          ],
+          "flagged": 0.1965
+        }
+      ]
+    },
+    "full_model": {
+      "Income": [
+        {
+          "group": "Low (< $25k)",
+          "n": 11573,
+          "prevalence": 0.2302,
+          "recall": 0.8146,
+          "recall_ci": [
+            0.7994,
+            0.8289
+          ],
+          "fnr": 0.1854,
+          "fnr_ci": [
+            0.1711,
+            0.2006
+          ],
+          "fpr": 0.4058,
+          "fpr_ci": [
+            0.3956,
+            0.416
+          ],
+          "precision": 0.3751,
+          "precision_ci": [
+            0.3627,
+            0.3877
+          ],
+          "flagged": 0.4999
+        },
+        {
+          "group": "Middle ($25k\u2013$75k)",
+          "n": 21139,
+          "prevalence": 0.14,
+          "recall": 0.7002,
+          "recall_ci": [
+            0.6835,
+            0.7165
+          ],
+          "fnr": 0.2998,
+          "fnr_ci": [
+            0.2835,
+            0.3165
+          ],
+          "fpr": 0.2386,
+          "fpr_ci": [
+            0.2325,
+            0.2449
+          ],
+          "precision": 0.3232,
+          "precision_ci": [
+            0.3119,
+            0.3348
+          ],
+          "flagged": 0.3032
+        },
+        {
+          "group": "High ($75k+)",
+          "n": 18024,
+          "prevalence": 0.0802,
+          "recall": 0.5152,
+          "recall_ci": [
+            0.4894,
+            0.5409
+          ],
+          "fnr": 0.4848,
+          "fnr_ci": [
+            0.4591,
+            0.5106
+          ],
+          "fpr": 0.1094,
+          "fpr_ci": [
+            0.1047,
+            0.1142
+          ],
+          "precision": 0.2912,
+          "precision_ci": [
+            0.274,
+            0.3092
+          ],
+          "flagged": 0.1419
+        }
+      ],
+      "Education": [
+        {
+          "group": "Less than high school",
+          "n": 2749,
+          "prevalence": 0.2626,
+          "recall": 0.8518,
+          "recall_ci": [
+            0.824,
+            0.8759
+          ],
+          "fnr": 0.1482,
+          "fnr_ci": [
+            0.1241,
+            0.176
+          ],
+          "fpr": 0.4988,
+          "fpr_ci": [
+            0.477,
+            0.5205
+          ],
+          "precision": 0.3782,
+          "precision_ci": [
+            0.355,
+            0.4021
+          ],
+          "flagged": 0.5915
+        },
+        {
+          "group": "High school graduate",
+          "n": 12576,
+          "prevalence": 0.1802,
+          "recall": 0.7524,
+          "recall_ci": [
+            0.7342,
+            0.7698
+          ],
+          "fnr": 0.2476,
+          "fnr_ci": [
+            0.2302,
+            0.2658
+          ],
+          "fpr": 0.3071,
+          "fpr_ci": [
+            0.2982,
+            0.3161
+          ],
+          "precision": 0.35,
+          "precision_ci": [
+            0.3368,
+            0.3635
+          ],
+          "flagged": 0.3873
+        },
+        {
+          "group": "Some college",
+          "n": 13847,
+          "prevalence": 0.1426,
+          "recall": 0.7148,
+          "recall_ci": [
+            0.6945,
+            0.7343
+          ],
+          "fnr": 0.2852,
+          "fnr_ci": [
+            0.2657,
+            0.3055
+          ],
+          "fpr": 0.2458,
+          "fpr_ci": [
+            0.2381,
+            0.2536
+          ],
+          "precision": 0.3259,
+          "precision_ci": [
+            0.3121,
+            0.3401
+          ],
+          "flagged": 0.3126
+        },
+        {
+          "group": "College graduate",
+          "n": 21564,
+          "prevalence": 0.0977,
+          "recall": 0.5961,
+          "recall_ci": [
+            0.575,
+            0.6169
+          ],
+          "fnr": 0.4039,
+          "fnr_ci": [
+            0.3831,
+            0.425
+          ],
+          "fpr": 0.1373,
+          "fpr_ci": [
+            0.1325,
+            0.1422
+          ],
+          "precision": 0.3198,
+          "precision_ci": [
+            0.3054,
+            0.3346
+          ],
+          "flagged": 0.1821
+        }
+      ]
+    }
+  }
+}

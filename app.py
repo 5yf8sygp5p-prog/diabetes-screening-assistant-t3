@@ -304,118 +304,14 @@ with st.form("screening_assistant_form"):
     submitted = st.form_submit_button(t["btn_analyze"])
 
 # ==============================================================================
-# 3. SIGNATURE TOOLBAR: RECALL VS. PRECISION & F2-SCORE TRADE-OFF CONTROLLER
+# 3. COMPUTE SCORE & TRIGGER ANIMATED ACTIONS WHEN ANALYZED
 # ==============================================================================
-TOOLBAR_I18N = {
-    "vi": {
-        "title": "🎛️ Thanh Công Cụ Chiến Lược Sàng Lọc: Ưu Tiên Recall (Độ Nhạy) hay Precision (Độ Chuẩn Xác)?",
-        "subtitle": (
-            "<b>💡 Tóm tắt cho Giám đốc & Chuyên gia: RECALL (Độ nhạy) quan trọng hơn nhiều so với Precision!</b> "
-            "Báo động giả (False Positive) chỉ tốn 1 lần xét nghiệm máu kiểm tra (~45$), còn bỏ sót bệnh (False Negative) "
-            "gây hậu quả biến chứng nặng nề (~225$+). Do đó, chỉ số tối ưu nhất là <b>F2-Score</b> (ưu tiên Recall gấp 2 lần Precision), "
-            "<b>PR-AUC (0.418)</b> và <b>Chi phí kỳ vọng tối thiểu</b>."
-        ),
-        "mode_label": "Chọn chế độ thanh công cụ sàng lọc (tự động điều chỉnh ngưỡng cắt τ):",
-        "m_high_rec": "🛡️ Ưu tiên Recall Tối đa (τ = 0.12 — Bắt 82.4% ca bệnh, an toàn tuyệt đối)",
-        "m_balanced": "⭐ Tối ưu F2-Score & Chi phí 5:1 (τ* = 0.18 — Khuyên dùng, bắt 70.5% ca bệnh)",
-        "m_high_prec": "🎯 Ưu tiên Precision Cao (τ = 0.32 — Giảm báo động giả, nhưng bỏ sót 58% ca bệnh)",
-        "m_custom": "🎚️ Tự kéo thanh trượt ngưỡng cắt (Custom Threshold)",
-    },
-    "en": {
-        "title": "🎛️ Clinical Screening Strategy Toolbar: Recall vs. Precision & Optimal F2-Score",
-        "subtitle": (
-            "<b>💡 Executive & Technical Takeaway: RECALL (Sensitivity) is far more critical than Precision!</b> "
-            "A false alarm (False Positive) only costs a routine blood test (~$45), whereas a missed case (False Negative) leaves "
-            "diabetes undiagnosed (~$225+). Thus, the optimal metrics are <b>F2-Score</b> (weights Recall 2× higher than Precision), "
-            "<b>PR-AUC (0.418)</b>, and <b>Minimum Expected Cost</b>."
-        ),
-        "mode_label": "Select Screening Strategy Mode (adjusts threshold τ):",
-        "m_high_rec": "🛡️ Maximize Recall / Safety First (τ = 0.12 — Catches 82.4% of cases)",
-        "m_balanced": "⭐ Optimal F2-Score & 5:1 Cost Ratio (τ* = 0.18 — Recommended, 70.5% Recall)",
-        "m_high_prec": "🎯 Maximize Precision (τ = 0.32 — Fewer false alarms, but misses 58% of cases)",
-        "m_custom": "🎚️ Custom Threshold Slider",
-    },
-    "zh": {
-        "title": "🎛️ 医疗筛查策略工具栏：召回率 (Recall) vs. 精确率 (Precision) 与最优 F2-Score",
-        "subtitle": (
-            "<b>💡 核心结论：在健康筛查中，召回率（Recall）远比精确率（Precision）更重要！</b> "
-            "误报仅需做一次常规验血，而漏诊会延误治疗。最优指标为 <b>F2-Score</b>（Recall 权重为 Precision 的 2 倍）与 <b>PR-AUC (0.418)</b>。"
-        ),
-        "mode_label": "选择筛查策略模式（自动调整阈值 τ）：",
-        "m_high_rec": "🛡️ 优先高召回率 Recall (τ = 0.12 — 检出 82.4% 病例，最安全)",
-        "m_balanced": "⭐ 最优 F2-Score 与 5:1 成本比 (τ* = 0.18 — 推荐，检出 70.5% 病例)",
-        "m_high_prec": "🎯 优先高精确率 Precision (τ = 0.32 — 减少误报，但漏检率高)",
-        "m_custom": "🎚️ 自定义滑动阈值",
-    },
-    "fr": {
-        "title": "🎛️ Barre d'Outils Stratégique : Rappel (Recall) vs Précision & Score F2 Optimal",
-        "subtitle": (
-            "<b>💡 Point Clé : En dépistage médical, le RAPPEL (Sensibilité) prime sur la Précision !</b> "
-            "Les métriques optimales sont le <b>Score F2</b> (Rappel pondéré 2× plus que la Précision) et le <b>PR-AUC (0.418)</b>."
-        ),
-        "mode_label": "Choisissez le mode de stratégie de dépistage (ajuste le seuil τ) :",
-        "m_high_rec": "🛡️ Priorité Rappel Maximal (τ = 0.12 — Détecte 82.4% des cas)",
-        "m_balanced": "⭐ Optimal Score F2 & Coût 5:1 (τ* = 0.18 — Recommandé, Rappel 70.5%)",
-        "m_high_prec": "🎯 Priorité Précision (τ = 0.32 — Moins de fausses alertes, manque 58% des cas)",
-        "m_custom": "🎚️ Curseur de seuil personnalisé",
-    },
-}
+active_th = float(st.session_state.get("active_threshold", 0.18))
+pt_now = min(curve_list, key=lambda r: abs(r["threshold"] - active_th))
+rec_now = float(pt_now["test_recall"])
+prec_now = float(pt_now["test_precision"])
+f2_now = (5 * prec_now * rec_now / (4 * prec_now + rec_now)) if (4 * prec_now + rec_now) > 0 else 0.0
 
-tb_cfg = TOOLBAR_I18N.get(lang_code, TOOLBAR_I18N["en"])
-
-with st.container(border=True):
-    st.markdown(f"<h4 style='margin:0 0 6px 0; color:#0f172a; font-weight:800;'>{tb_cfg['title']}</h4>", unsafe_allow_html=True)
-    st.markdown(
-        f"<div style='background:#f0f9ff; border-left:4px solid #0284c7; padding:10px 14px; border-radius:8px; font-size:0.89rem; color:#0c4a6e; margin-bottom:12px;'>"
-        f"{tb_cfg['subtitle']}</div>",
-        unsafe_allow_html=True,
-    )
-
-    preset_mode = st.radio(
-        tb_cfg["mode_label"],
-        options=["balanced", "high_rec", "high_prec", "custom"],
-        format_func=lambda k: {
-            "balanced": tb_cfg["m_balanced"],
-            "high_rec": tb_cfg["m_high_rec"],
-            "high_prec": tb_cfg["m_high_prec"],
-            "custom": tb_cfg["m_custom"],
-        }[k],
-        horizontal=False,
-        index=0,
-    )
-
-    if preset_mode == "high_rec":
-        active_th = 0.12
-    elif preset_mode == "balanced":
-        active_th = 0.18
-    elif preset_mode == "high_prec":
-        active_th = 0.32
-    else:
-        active_th = st.slider(
-            "Threshold (τ)",
-            min_value=0.06,
-            max_value=0.60,
-            value=float(st.session_state.get("active_threshold", 0.18)),
-            step=0.02,
-        )
-    st.session_state["active_threshold"] = active_th
-
-    pt_now = min(curve_list, key=lambda r: abs(r["threshold"] - active_th))
-    rec_now = float(pt_now["test_recall"])
-    prec_now = float(pt_now["test_precision"])
-    fpr_now = float(pt_now["test_fpr"])
-    f1_now = (2 * prec_now * rec_now / (prec_now + rec_now)) if (prec_now + rec_now) > 0 else 0.0
-    f2_now = (5 * prec_now * rec_now / (4 * prec_now + rec_now)) if (4 * prec_now + rec_now) > 0 else 0.0
-
-    tm_col1, tm_col2, tm_col3, tm_col4 = st.columns(4)
-    tm_col1.metric("Recall (Độ nhạy — Ưu tiên #1)", f"{rec_now:.1%}")
-    tm_col2.metric("Precision (Độ chuẩn xác)", f"{prec_now:.1%}")
-    tm_col3.metric("F2-Score (Tối ưu Sàng lọc Y tế)", f"{f2_now:.3f}")
-    tm_col4.metric("PR-AUC (Độ phân tách tổng thể)", "0.418")
-
-# ==============================================================================
-# 4. COMPUTE SCORE & TRIGGER ANIMATED ACTIONS WHEN ANALYZED
-# ==============================================================================
 bmi_val = round(float(weight_kg) / ((float(height_cm) / 100.0) ** 2), 1)
 lower_bmi = max(18.5, round(bmi_val - 2.0, 1))
 
@@ -456,107 +352,107 @@ if submitted:
 has_run = st.session_state.get("has_analyzed", False)
 
 # ==============================================================================
-# 5. DUAL AI DOCTORS (GONG YOO & LEE SUNG-KYUNG) + REAL AUDIO & VOICEOVER
+# 5. DUAL AI DOCTORS (ORIGINAL NAMES PER COUNTRY) + WHITE & MEDICAL BLUE THEME
 # ==============================================================================
 DOC_TEXT = {
     "vi": {
-        "section_title": "🩺 Phòng Hội Chẩn & Giao Lưu Cùng Bác Sĩ Gong Yoo & Bác Sĩ Lee Sung-kyung",
-        "m_name": "👨‍⚕️ Bác sĩ Gong Yoo (Chuyên khoa Nội tiết & AI)",
-        "f_name": "👩‍⚕️ Bác sĩ Lee Sung-kyung (Chuyên khoa Dinh dưỡng & Lối sống)",
-        "m_idle": "Chào bạn! Tôi là <b>Bác sĩ Gong Yoo</b>. Hãy điền 7 câu hỏi trên rồi bấm <b>Phân tích ngay</b> để tôi đánh giá điểm rủi ro cho bạn nhé (bấm nút 🔊 bên dưới để nghe giọng nói và hiệu ứng âm thanh của tụi tôi!).",
-        "f_idle": "Xin chào! Mình là <b>Bác sĩ Lee Sung-kyung</b>. Bấm <b>Phân tích ngay</b> để mình tính BMI và lên thực đơn cho bạn nha — hỏi nghiêm túc hay hỏi 'vô tri' tụi mình đều cân tất!",
+        "section_title": "🩺 Phòng Hội Chẩn & Giao Lưu Cùng BS. Minh Quân & BS. Thảo Vy",
+        "m_name": "👨‍⚕️ BS. Minh Quân (Chuyên khoa Nội tiết & AI)",
+        "f_name": "👩‍⚕️ BS. Thảo Vy (Chuyên khoa Dinh dưỡng & Lối sống)",
+        "m_idle": "Chào bạn! Tôi là <b>BS. Minh Quân</b>. Hãy điền 7 câu hỏi trên rồi bấm <b>Phân tích ngay</b> để tôi đánh giá điểm rủi ro cho bạn nhé (hoặc hỏi tôi bất cứ câu gì từ sức khỏe tới chuyện đời thường bên dưới!).",
+        "f_idle": "Xin chào! Mình là <b>BS. Thảo Vy</b>. Bấm <b>Phân tích ngay</b> để mình tính BMI và lên thực đơn cho bạn nha — kể cả hỏi chuyện thi IELTS xong đi đâu chơi tụi mình cũng tư vấn tuốt!",
         "m_flag": f"Điểm tương đồng của bạn là <b>{prob_gb:.1%}</b> (vượt ngưỡng tầm soát <b>{active_th:.2f}</b>). Yếu tố nổi bật nhất là <b>{top_feat_label}</b>. Bạn nên đặt lịch làm xét nghiệm <b>Đường huyết lúc đói (FPG)</b> hoặc <b>HbA1c</b> để kiểm tra nhé.",
         "m_safe": f"Tin vui! Điểm rủi ro của bạn chỉ là <b>{prob_gb:.1%}</b> (thấp hơn ngưỡng cảnh báo <b>{active_th:.2f}</b>). Bạn chưa cần xét nghiệm khẩn cấp hôm nay, chỉ cần duy trì khám sức khỏe định kỳ.",
         "f_flag": f"BMI hiện tại của bạn là <b>{bmi_val:.1f} kg/m²</b>. Nếu bạn giảm nhẹ BMI xuống <b>{lower_bmi:.1f} kg/m²</b> kết hợp đi bộ 30 phút/ngày, điểm rủi ro sẽ giảm xuống còn <b>{prob_whatif:.1%}</b>!",
         "f_safe": f"BMI của bạn là <b>{bmi_val:.1f} kg/m²</b>. Để giữ mức rủi ro thấp (<b>{prob_whatif:.1%}</b>), nhớ ăn nhiều rau xanh, bớt trà sữa full topping và ngủ đủ giấc nha!",
-        "chat_header": "💬 Chat Trực Tiếp Cùng AI Bác Sĩ Gong Yoo & Bác Sĩ Lee Sung-kyung (Tích hợp AI LLM Free + Phát Giọng Nói!)",
+        "chat_header": "💬 Chat Trực Tiếp Cùng AI BS. Minh Quân & BS. Thảo Vy (Trả lời mọi câu hỏi + Giọng nói Nam/Nữ!)",
         "choose_doc": "Chọn bác sĩ bạn muốn tương tác:",
-        "opt_both": "👨‍⚕️👩‍⚕️ Cả 2 Bác sĩ (Gong Yoo & Lee Sung-kyung)",
-        "opt_male": "👨‍⚕️ Chỉ hỏi Bác sĩ Gong Yoo",
-        "opt_female": "👩‍⚕️ Chỉ hỏi Bác sĩ Lee Sung-kyung",
-        "quick_q_label": "Bấm thử các câu hỏi mẫu hoặc tự gõ bất kỳ câu hỏi nào vào ô chat bên dưới:",
-        "q1": "⚖️ Giữa Recall và Precision thì cái nào tốt hơn, chỉ số nào tối ưu nhất?",
+        "opt_both": "👨‍⚕️👩‍⚕️ Cả 2 Bác sĩ (Minh Quân & Thảo Vy)",
+        "opt_male": "👨‍⚕️ Chỉ hỏi BS. Minh Quân",
+        "opt_female": "👩‍⚕️ Chỉ hỏi BS. Thảo Vy",
+        "quick_q_label": "Bấm thử các câu hỏi mẫu hoặc tự gõ bất kỳ câu hỏi nào (kể cả hỏi nhảm/vui) vào ô chat bên dưới:",
+        "q1": "🎓 Thi IELTS xong nên đi đâu chơi cho xả stress?",
         "q2": "🧋 Uống trà sữa 0% đường nhưng full trân châu có bị tiểu đường không?",
         "q3": "🐜 Đi tiểu có kiến bu mới là bị tiểu đường đúng không bác sĩ?",
         "q4": "💓 Nhìn 2 bác sĩ đẹp quá tim đập nhanh có phải triệu chứng bệnh không?",
         "q5": "🩸 Nếu đi khám thì tôi nên yêu cầu xét nghiệm máu nào?",
-        "q6": "🥗 Thực đơn & bài tập nào phù hợp với BMI của tôi?",
-        "input_placeholder": "Hỏi bất cứ câu gì (AI LLM tự động trả lời theo ngữ cảnh của bạn)...",
+        "q6": "⚖️ Giữa Recall và Precision thì cái nào tốt hơn?",
+        "input_placeholder": "Hỏi bất cứ câu gì trên đời (VD: ielts nên đi đâu chơi nè, tối nay ăn gì, crush không rep)...",
         "send_btn": "Gửi cho AI",
     },
     "en": {
-        "section_title": "🩺 AI Medical Consultation with Dr. Gong Yoo & Dr. Lee Sung-kyung",
-        "m_name": "👨‍⚕️ Dr. Gong Yoo (Endocrinology & AI Risk Specialist)",
-        "f_name": "👩‍⚕️ Dr. Lee Sung-kyung (Nutrition & Lifestyle Specialist)",
-        "m_idle": "Hello! I'm <b>Dr. Gong Yoo</b>. Fill in the 7 questions above and click <b>Analyze</b>, or click the 🔊 buttons below to hear our voiceover and medical sound effects!",
-        "f_idle": "Hi! I'm <b>Dr. Lee Sung-kyung</b>. Click <b>Analyze</b> to get your BMI & wellness check—and feel free to chat with us below!",
+        "section_title": "🩺 AI Medical Consultation with Dr. Ethan Brooks & Dr. Clara Bennett",
+        "m_name": "👨‍⚕️ Dr. Ethan Brooks (Endocrinology & AI Specialist)",
+        "f_name": "👩‍⚕️ Dr. Clara Bennett (Nutrition & Lifestyle Specialist)",
+        "m_idle": "Hello! I'm <b>Dr. Ethan Brooks</b>. Fill in the 7 questions above and click <b>Analyze</b>, or ask our AI doctors anything—serious or silly—below!",
+        "f_idle": "Hi! I'm <b>Dr. Clara Bennett</b>. Click <b>Analyze</b> to get your BMI & wellness check—and feel free to chat with us about anything!",
         "m_flag": f"Your estimated risk score is <b>{prob_gb:.1%}</b> (above our <b>{active_th:.2f}</b> cutoff; top factor: <b>{top_feat_label}</b>). I recommend asking your doctor for a routine <b>Fasting Plasma Glucose (FPG)</b> or <b>HbA1c</b> test.",
         "m_safe": f"Good news! Your estimated score is <b>{prob_gb:.1%}</b> (below our <b>{active_th:.2f}</b> cutoff). No urgent lab test is flagged today.",
         "f_flag": f"Your BMI is <b>{bmi_val:.1f} kg/m²</b>. Lowering your BMI toward <b>{lower_bmi:.1f} kg/m²</b> with 30 minutes of daily walking reduces your risk score to <b>{prob_whatif:.1%}</b>!",
         "f_safe": f"Your BMI is <b>{bmi_val:.1f} kg/m²</b>. Keep enjoying balanced meals and daily activity to maintain a low risk of <b>{prob_whatif:.1%}</b>!",
-        "chat_header": "💬 Live AI Chat with Dr. Gong Yoo & Dr. Lee Sung-kyung (Free AI LLM + Audio Voiceover!)",
+        "chat_header": "💬 Live AI Chat with Dr. Ethan Brooks & Dr. Clara Bennett (Answers Any Question + Voice!)",
         "choose_doc": "Choose which doctor to talk to:",
-        "opt_both": "👨‍⚕️👩‍⚕️ Both Doctors (Gong Yoo & Lee Sung-kyung)",
-        "opt_male": "👨‍⚕️ Dr. Gong Yoo Only",
-        "opt_female": "👩‍⚕️ Dr. Lee Sung-kyung Only",
+        "opt_both": "👨‍⚕️👩‍⚕️ Both Doctors (Ethan Brooks & Clara Bennett)",
+        "opt_male": "👨‍⚕️ Dr. Ethan Brooks Only",
+        "opt_female": "👩‍⚕️ Dr. Clara Bennett Only",
         "quick_q_label": "Try a quick question or type anything into the live AI chat below:",
-        "q1": "⚖️ Is Recall or Precision better for screening, and which metric is optimal?",
+        "q1": "🎓 Where should I hang out to celebrate after finishing IELTS?",
         "q2": "🧋 Does 0% sugar boba tea with extra tapioca pearls count as healthy?",
         "q3": "🐜 Can ants really smell sugar in urine if someone has diabetes?",
         "q4": "💓 My heart beats fast looking at you two—is that diabetes?",
         "q5": "🩸 Which exact blood test should I ask my doctor for?",
-        "q6": "🥗 What diet & exercise plan fits my current BMI?",
-        "input_placeholder": "Ask anything—our live AI LLM doctors will answer you directly...",
+        "q6": "⚖️ Is Recall or Precision better for medical screening?",
+        "input_placeholder": "Ask anything—even random life questions...",
         "send_btn": "Ask AI",
     },
     "zh": {
-        "section_title": "🩺 与孔刘医生 (Dr. Gong Yoo) & 李圣经医生 (Dr. Lee Sung-kyung) 互动会诊",
-        "m_name": "👨‍⚕️ 孔刘医生 Dr. Gong Yoo（内分泌与 AI 专家）",
-        "f_name": "👩‍⚕️ 李圣经医生 Dr. Lee Sung-kyung（营养与生活方式专家）",
-        "m_idle": "您好！我是<b>孔刘医生</b>。请填写上方 7 个问题并点击<b>立即分析</b>，或点击下方 🔊 按钮收听语音播报与医疗音效！",
-        "f_idle": "嗨！我是<b>李圣经医生</b>。无论是医疗指标还是日常脑洞问题，都可以在下方问我们哦！",
+        "section_title": "🩺 与林明轩医生 (Dr. Lin) & 苏婉清医生 (Dr. Su) 互动会诊",
+        "m_name": "👨‍⚕️ 林明轩医生（内分泌与 AI 专家）",
+        "f_name": "👩‍⚕️ 苏婉清医生（营养与生活方式专家）",
+        "m_idle": "您好！我是<b>林明轩医生</b>。请填写上方 7 个问题并点击<b>立即分析</b>，或在下方问我们任何严肃或搞笑的问题！",
+        "f_idle": "嗨！我是<b>苏婉清医生</b>。无论是体检还是“考完雅思去哪玩”，都可以在下方问我们哦！",
         "m_flag": f"您的估计风险得分为 <b>{prob_gb:.1%}</b>，高于阈值 <b>{active_th:.2f}</b>（主要因素：<b>{top_feat_label}</b>）。建议咨询医生做 <b>FPG</b> 或 <b>HbA1c</b> 检测。",
         "m_safe": f"好消息！您的风险得分为 <b>{prob_gb:.1%}</b>，低于阈值 <b>{active_th:.2f}</b>。目前无需紧急检测。",
         "f_flag": f"您的 BMI 为 <b>{bmi_val:.1f} kg/m²</b>。若将 BMI 降至 <b>{lower_bmi:.1f} kg/m²</b>，风险将降至 <b>{prob_whatif:.1%}</b>！",
         "f_safe": f"您的 BMI 为 <b>{bmi_val:.1f} kg/m²</b>。请继续保持均衡饮食与适度运动！",
-        "chat_header": "💬 与孔刘医生和李圣经医生 AI 实时对话（免费 AI 大模型 + 语音音效！）",
+        "chat_header": "💬 与林明轩医生和苏婉清医生 AI 实时对话（支持任何话题 + 男女语音！）",
         "choose_doc": "选择咨询对象：",
         "opt_both": "👨‍⚕️👩‍⚕️ 两位医生联合解答",
-        "opt_male": "👨‍⚕️ 仅问孔刘医生",
-        "opt_female": "👩‍⚕️ 仅问李圣经医生",
+        "opt_male": "👨‍⚕️ 仅问林明轩医生",
+        "opt_female": "👩‍⚕️ 仅问苏婉清医生",
         "quick_q_label": "点击快捷问题或输入任何问题：",
-        "q1": "⚖️ 召回率 (Recall) 和精确率 (Precision) 哪个更重要？哪个指标最优？",
+        "q1": "🎓 考完雅思之后去哪里放松比较好？",
         "q2": "🧋 点无糖奶茶但加满黑糖珍珠会有风险吗？",
         "q3": "🐜 尿液招蚂蚁真的是糖尿病的症状吗？",
         "q4": "💓 看到两位医生心跳加速是生病了吗？",
         "q5": "🩸 去医院应该要求做哪项血液检查？",
-        "q6": "🥗 适合我当前 BMI 的饮食与运动方案？",
-        "input_placeholder": "输入任何问题（AI 大模型将结合您的健康档案为您解答）...",
+        "q6": "⚖️ 召回率 (Recall) 和精确率 (Precision) 哪个更重要？",
+        "input_placeholder": "输入任何问题（正经或脑洞问题都可以）...",
         "send_btn": "发送给 AI",
     },
     "fr": {
-        "section_title": "🩺 Consultation Interactive avec Dr Gong Yoo & Dr Lee Sung-kyung",
-        "m_name": "👨‍⚕️ Dr Gong Yoo (Endocrinologie & IA)",
-        "f_name": "👩‍⚕️ Dr Lee Sung-kyung (Nutrition & Mode de vie)",
-        "m_idle": "Bonjour ! Je suis le <b>Dr Gong Yoo</b>. Remplissez les 7 questions et cliquez sur <b>Analyser</b>, ou utilisez les boutons audio 🔊 ci-dessous !",
-        "f_idle": "Salut ! Je suis le <b>Dr Lee Sung-kyung</b>. Posez-nous toutes vos questions ci-dessous !",
+        "section_title": "🩺 Consultation Interactive avec Dr Julien Moreau & Dr Camille Laurent",
+        "m_name": "👨‍⚕️ Dr Julien Moreau (Endocrinologie & IA)",
+        "f_name": "👩‍⚕️ Dr Camille Laurent (Nutrition & Mode de vie)",
+        "m_idle": "Bonjour ! Je suis le <b>Dr Julien Moreau</b>. Remplissez les 7 questions et cliquez sur <b>Analyser</b>, ou posez-nous n'importe quelle question ci-dessous !",
+        "f_idle": "Salut ! Je suis le <b>Dr Camille Laurent</b>. Posez-nous toutes vos questions sérieuses ou amusantes ci-dessous !",
         "m_flag": f"Votre score est de <b>{prob_gb:.1%}</b> (au-dessus du seuil <b>{active_th:.2f}</b> ; facteur clé : <b>{top_feat_label}</b>). Demandez un test <b>FPG</b> ou <b>HbA1c</b> à votre médecin.",
         "m_safe": f"Bonne nouvelle ! Votre score est de <b>{prob_gb:.1%}</b> (sous le seuil <b>{active_th:.2f}</b>). Aucun test urgent requis.",
         "f_flag": f"Votre IMC est de <b>{bmi_val:.1f} kg/m²</b>. En le réduisant vers <b>{lower_bmi:.1f} kg/m²</b>, votre score baisserait à <b>{prob_whatif:.1%}</b> !",
         "f_safe": f"Votre IMC est de <b>{bmi_val:.1f} kg/m²</b>. Continuez vos bonnes habitudes !",
-        "chat_header": "💬 Chat IA en Direct avec Dr Gong Yoo & Dr Lee Sung-kyung (IA LLM + Voix & Sons !)",
+        "chat_header": "💬 Chat IA en Direct avec Dr Julien Moreau & Dr Camille Laurent (Toutes questions + Voix !)",
         "choose_doc": "Choisissez votre médecin :",
         "opt_both": "👨‍⚕️👩‍⚕️ Les 2 médecins ensemble",
-        "opt_male": "👨‍⚕️ Dr Gong Yoo uniquement",
-        "opt_female": "👩‍⚕️ Dr Lee Sung-kyung uniquement",
+        "opt_male": "👨‍⚕️ Dr Julien Moreau uniquement",
+        "opt_female": "👩‍⚕️ Dr Camille Laurent uniquement",
         "quick_q_label": "Questions rapides ou libres :",
-        "q1": "⚖️ Le Rappel (Recall) ou la Précision est-il meilleur ? Quelle métrique est optimale ?",
+        "q1": "🎓 Où sortir fêter la fin de l'IELTS ?",
         "q2": "🧋 Un bubble tea 0% sucre mais plein de perles de tapioca, ça passe ?",
         "q3": "🐜 Les fourmis sont-elles vraiment attirées par le sucre en cas de diabète ?",
         "q4": "💓 Mon cœur bat vite en vous voyant, est-ce un symptôme ?",
         "q5": "🩸 Quel test sanguin demander au médecin ?",
-        "q6": "🥗 Quel programme nutrition & sport pour mon IMC ?",
-        "input_placeholder": "Posez n'importe quelle question à notre IA...",
+        "q6": "⚖️ Le Rappel (Recall) ou la Précision est-il meilleur ?",
+        "input_placeholder": "Posez n'importe quelle question...",
         "send_btn": "Envoyer à l'IA",
     },
 }
@@ -566,16 +462,16 @@ m_speech = d_cfg["m_idle"] if not has_run else (d_cfg["m_flag"] if is_flagged el
 f_speech = d_cfg["f_idle"] if not has_run else (d_cfg["f_flag"] if is_flagged else d_cfg["f_safe"])
 
 st.markdown(
-    f"<h3 style='color:#1e293b; margin-top:16px; margin-bottom:10px; font-weight:800;'>{d_cfg['section_title']}</h3>",
+    f"<h3 style='color:#0f172a; margin-top:16px; margin-bottom:10px; font-weight:800;'>{d_cfg['section_title']}</h3>",
     unsafe_allow_html=True,
 )
 
 doc_col1, doc_col2 = st.columns(2, gap="medium")
 with doc_col1:
     st.markdown(
-        "<div style='display:flex; align-items:center; gap:16px; background:#ffffff; border:1.5px solid #cbd5e1; border-left:6px solid #2563eb; "
-        "border-radius:14px; padding:16px 18px; box-shadow:0 3px 10px rgba(15,23,42,0.04); min-height:156px;'>"
-        f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_MALE_B64}' style='width:92px; height:112px; object-fit:cover; border-radius:12px; border:2px solid #2563eb; flex-shrink:0;'/>"
+        "<div style='display:flex; align-items:center; gap:16px; background:#ffffff; border:1.5px solid #bfdbfe; border-left:6px solid #1d4ed8; "
+        "border-radius:14px; padding:16px 18px; box-shadow:0 3px 10px rgba(37,99,235,0.06); min-height:156px;'>"
+        f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_MALE_B64}' style='width:92px; height:112px; object-fit:cover; border-radius:12px; border:2px solid #1d4ed8; flex-shrink:0;'/>"
         "<div>"
         f"<div style='font-weight:800; color:#1d4ed8; font-size:0.95rem; margin-bottom:6px;'><span class='live-dot'></span>{d_cfg['m_name']}</div>"
         f"<div style='color:#1e293b; font-size:0.91rem; line-height:1.55;'>{m_speech}</div>"
@@ -586,11 +482,11 @@ with doc_col1:
 
 with doc_col2:
     st.markdown(
-        "<div style='display:flex; align-items:center; gap:16px; background:#ffffff; border:1.5px solid #cbd5e1; border-left:6px solid #0d9488; "
-        "border-radius:14px; padding:16px 18px; box-shadow:0 3px 10px rgba(15,23,42,0.04); min-height:156px;'>"
-        f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_FEMALE_B64}' style='width:92px; height:112px; object-fit:cover; border-radius:12px; border:2px solid #0d9488; flex-shrink:0;'/>"
+        "<div style='display:flex; align-items:center; gap:16px; background:#ffffff; border:1.5px solid #bae6fd; border-left:6px solid #0284c7; "
+        "border-radius:14px; padding:16px 18px; box-shadow:0 3px 10px rgba(2,132,199,0.06); min-height:156px;'>"
+        f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_FEMALE_B64}' style='width:92px; height:112px; object-fit:cover; border-radius:12px; border:2px solid #0284c7; flex-shrink:0;'/>"
         "<div>"
-        f"<div style='font-weight:800; color:#0f766e; font-size:0.95rem; margin-bottom:6px;'><span class='live-dot'></span>{d_cfg['f_name']}</div>"
+        f"<div style='font-weight:800; color:#0369a1; font-size:0.95rem; margin-bottom:6px;'><span class='live-dot'></span>{d_cfg['f_name']}</div>"
         f"<div style='color:#1e293b; font-size:0.91rem; line-height:1.55;'>{f_speech}</div>"
         "</div>"
         "</div>",
@@ -723,28 +619,28 @@ clean_f_voice = re.sub(r"<[^>]+>", "", f_speech)
 
 AUDIO_BTN_LABELS = {
     "vi": (
-        "🔊 Nghe BS. Gong Yoo nói",
-        "🔊 Nghe BS. Lee Sung-kyung nói",
+        "🔊 Nghe BS. Minh Quân nói",
+        "🔊 Nghe BS. Thảo Vy nói",
         "💓 Âm thanh Nhịp Tim & Quét AI",
-        "🎵 Bấm để nghe Giọng nói & Âm thanh (Chạy được trên mọi trình duyệt):",
+        "🎵 Bấm để nghe Giọng nói Nam/Nữ & Âm thanh Y tế:",
     ),
     "en": (
-        "🔊 Hear Dr. Gong Yoo Speak",
-        "🔊 Hear Dr. Lee Sung-kyung Speak",
+        "🔊 Hear Dr. Ethan Brooks",
+        "🔊 Hear Dr. Clara Bennett",
         "💓 Hospital ECG & Scan Sound",
-        "🎵 Click to Hear AI Voiceover & Medical Sound Effects:",
+        "🎵 Click to Hear Male/Female AI Voiceover & Medical SFX:",
     ),
     "zh": (
-        "🔊 收听孔刘医生语音",
-        "🔊 收听李圣经医生语音",
+        "🔊 收听林明轩医生语音",
+        "🔊 收听苏婉清医生语音",
         "💓 播放心电监护音效",
-        "🎵 点击收听 AI 语音播报与医疗音效：",
+        "🎵 点击收听男女 AI 语音播报与医疗音效：",
     ),
     "fr": (
-        "🔊 Écouter Dr Gong Yoo",
-        "🔊 Écouter Dr Lee Sung-kyung",
+        "🔊 Écouter Dr Julien Moreau",
+        "🔊 Écouter Dr Camille Laurent",
         "💓 Effet Sonore ECG & Scan",
-        "🎵 Cliquez pour écouter la voix IA et les sons médicaux :",
+        "🎵 Cliquez pour écouter les voix IA et sons médicaux :",
     ),
 }
 btn_m_lbl, btn_f_lbl, btn_sfx_lbl, audio_bar_lbl = AUDIO_BTN_LABELS.get(lang_code, AUDIO_BTN_LABELS["en"])
@@ -775,23 +671,26 @@ if not has_run:
 
 
 # ==============================================================================
-# 9. FREE LIVE AI LLM + SMART MEDICAL/WITTY CONVERSATIONAL ENGINE
+# 9. FREE LIVE AI LLM + UNIVERSAL SMART/WITTY CONVERSATIONAL ENGINE
 # ==============================================================================
-def call_free_llm_api(question_text: str) -> tuple:
-    lang_names = {"vi": "Tiếng Việt", "en": "English", "zh": "Simplified Chinese", "fr": "French"}
-    target_lang = lang_names.get(lang_code, "Vietnamese")
+@st.cache_data(show_spinner=False, ttl=300)
+def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f_label: str) -> tuple:
+    """
+    Calls free Pollinations AI LLM endpoints so the two doctors can answer ANY question
+    (serious, silly, off-topic, lifestyle, travel, exams, relationships, etc.) directly and naturally.
+    """
+    import urllib.parse
+
+    lang_names = {"vi": "Vietnamese", "en": "English", "zh": "Simplified Chinese", "fr": "French"}
+    target_lang = lang_names.get(lang_key, "Vietnamese")
     system_prompt = (
-        f"You are roleplaying TWO charming, witty, and medically knowledgeable AI doctors at Eastern International University (EIU): "
-        f"1) Dr. Gong Yoo (Endocrinologist & AI Data Scientist — warm, analytical, witty) and "
-        f"2) Dr. Lee Sung-kyung (Clinical Nutritionist & Lifestyle Specialist — cheerful, practical, empathetic). "
-        f"The user's current screening profile: Age group={AGE_OPTIONS[age_code]}, Height={height_cm}cm, Weight={weight_kg}kg, "
-        f"BMI={bmi_val:.1f} kg/m², AI Diabetes Risk Score={prob_gb:.1%}, Decision Threshold={active_th:.2f}, "
-        f"Top factor={top_feat_label}, HighBP={high_bp}, HighChol={high_chol}. "
-        f"Even if the user asks a silly, funny, romantic, or random off-topic question, answer it with humor and charm FIRST, "
-        f"and then smoothly connect it to their health/diabetes screening profile! "
-        f"Reply strictly in {target_lang} using EXACTLY two paragraphs separated by '||SPLIT||': "
-        f"First paragraph = Dr. Gong Yoo's reply (2-3 sentences). Second paragraph = Dr. Lee Sung-kyung's reply (2-3 sentences). "
-        f"Do not include speaker labels before the paragraphs."
+        f"You are roleplaying TWO friendly, witty, down-to-earth AI doctors: "
+        f"1) {doc_m_label} (warm, humorous, sharp) and 2) {doc_f_label} (cheerful, practical, fun). "
+        f"The user can ask ANYTHING—including silly, random, or off-topic life questions (like where to hang out after IELTS, food, dating, movies, coding, weather, etc.). "
+        f"IMPORTANT: Answer the user's ACTUAL question directly, genuinely, and with humor! Do NOT force diabetes or blood sugar statistics into off-topic answers unless it fits as a tiny playful joke at the end. "
+        f"Reply strictly in {target_lang} as TWO short conversational paragraphs separated by '||SPLIT||': "
+        f"Paragraph 1 = Male doctor's direct answer (2-3 sentences). Paragraph 2 = Female doctor's direct follow-up (2-3 sentences). "
+        f"Do not prefix paragraphs with speaker names."
     )
     payload = {
         "model": "openai",
@@ -799,23 +698,54 @@ def call_free_llm_api(question_text: str) -> tuple:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": question_text},
         ],
-        "temperature": 0.7,
+        "temperature": 0.85,
     }
+
+    def _split_reply(txt: str):
+        txt = txt.strip()
+        if not txt:
+            return None, None
+        if "||SPLIT||" in txt:
+            p = txt.split("||SPLIT||", 1)
+            return p[0].strip(), p[1].strip()
+        paras = [p.strip() for p in txt.split("\n\n") if p.strip()]
+        if len(paras) >= 2:
+            return paras[0], " ".join(paras[1:])
+        lines = [ln.strip() for ln in txt.splitlines() if ln.strip()]
+        if len(lines) >= 2:
+            return lines[0], " ".join(lines[1:])
+        return txt, None
+
+    # Attempt 1: OpenAI-compatible POST endpoint
     try:
         req = urllib.request.Request(
             "https://text.pollinations.ai/openai",
             data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json", "User-Agent": "EIU-Diabetes-Assistant/1.0"},
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=7) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             raw = json.loads(resp.read().decode("utf-8"))
-            content = raw["choices"][0]["message"]["content"].strip()
-            if "||SPLIT||" in content:
-                parts = content.split("||SPLIT||", 1)
-                return parts[0].strip(), parts[1].strip()
+            content = raw["choices"][0]["message"]["content"]
+            m_ans, f_ans = _split_reply(content)
+            if m_ans and f_ans:
+                return m_ans, f_ans
     except Exception:
         pass
+
+    # Attempt 2: Direct Pollinations text GET endpoint
+    try:
+        full_prompt = f"{system_prompt}\n\nUser question: {question_text}"
+        url = "https://text.pollinations.ai/" + urllib.parse.quote(full_prompt)
+        req2 = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req2, timeout=10) as resp2:
+            content2 = resp2.read().decode("utf-8")
+            m_ans, f_ans = _split_reply(content2)
+            if m_ans and f_ans:
+                return m_ans, f_ans
+    except Exception:
+        pass
+
     return None, None
 
 
@@ -823,49 +753,55 @@ def generate_doctor_replies(question_text: str, use_live_llm: bool = True) -> tu
     q = question_text.lower().strip()
 
     if lang_code == "vi":
+        if any(w in q for w in ["ielts", "toeic", "thi", "học", "ôn thi"]):
+            ans_m = (
+                "Chúc mừng bạn sắp/vừa vượt ải IELTS nha! Thi xong rồi thì việc đầu tiên là **đóng sách vở lại ngay**, đi ăn một bữa lẩu nướng hoặc buffet hải sản thật đã để thưởng cho bộ não vừa chạy hết công suất!"
+            )
+            ans_f = (
+                "Chuẩn luôn! Nếu thích chill nhẹ nhàng ở Sài Gòn/Bình Dương thì bạn có thể rủ hội bạn đi cà phê sân vườn, xem một bộ phim hài ngoài rạp hoặc làm chuyến đi Vũng Tàu/Đà Lạt 2 ngày 1 đêm cho hồi phục tinh thần — nhớ ngủ bù cho đã nhé!"
+            )
+            return ans_m, ans_f
+        if any(w in q for w in ["đi đâu", "chơi", "du lịch", "cuối tuần", "chill", "xả stress", "phim"]):
+            ans_m = (
+                "Cuối tuần hoặc lúc cần xả stress thì cứ chọn những nơi có không gian thoáng đãng như công viên, phố đi bộ, đi bowling hoặc rạp chiếu phim cùng bạn bè — vừa vui vừa giúp đầu óc giải tỏa 100%!"
+            )
+            ans_f = (
+                "Còn nếu bạn thích kiểu nhẹ nhàng hơn thì tìm một quán cà phê yên tĩnh đọc truyện, đi dạo bờ sông buổi chiều mát, hoặc rủ nhóm bạn đi ăn đồ nướng là hết sảy luôn đó!"
+            )
+            return ans_m, ans_f
         if any(w in q for w in ["recall", "precision", "tối ưu", "f2", "pr-auc", "chỉ số nào"]):
             ans_m = (
                 f"Trong bài toán tầm soát tiểu đường tại nhà, <b>Recall (Độ nhạy = {rec_now:.1%}) quan trọng hơn nhiều so với Precision ({prec_now:.1%})!</b> "
-                f"Tại sao? Vì nếu báo động giả (Precision thấp), bạn chỉ tốn ~45$ đi xét nghiệm máu kiểm tra cho yên tâm. Nhưng nếu bỏ sót bệnh (Recall thấp), "
-                f"người bệnh không biết mình mắc tiểu đường suốt nhiều năm dẫn đến biến chứng tim, thận, mắt. Vì vậy chỉ số tối ưu nhất để chọn mô hình và ngưỡng cắt là "
-                f"<b>F2-Score ({f2_now:.3f} — coi trọng Recall gấp 2 lần Precision)</b>, kết hợp với <b>PR-AUC (0.418)</b> và <b>Chi phí kỳ vọng tối thiểu (tỷ lệ 5:1 &rarr; ngưỡng τ* = 0.18)</b>!"
+                f"Vì báo động giả chỉ tốn ~45$ xét nghiệm máu kiểm tra, còn bỏ sót bệnh gây biến chứng nặng. Chỉ số tối ưu nhất là "
+                f"<b>F2-Score ({f2_now:.3f} — coi trọng Recall gấp 2 lần Precision)</b> và <b>PR-AUC (0.418)</b>."
             )
             ans_f = (
-                "Đó cũng là lý do tụi mình thiết kế <b>Thanh Công Cụ Chiến Lược Sàng Lọc (Recall vs. Precision)</b> ngay phía trên đó! "
-                "Khi bạn muốn an toàn tuyệt đối không bỏ sót bệnh, hãy bật chế độ <b>Ưu tiên Recall (τ = 0.12)</b> nhé!"
+                "Bạn có thể tự kéo thử tỷ lệ chi phí trên trang <b>Ngưỡng cắt & Chi phí</b> ở thanh menu bên trái để xem Recall và F2-Score thay đổi trực quan nhé!"
             )
             return ans_m, ans_f
         if any(w in q for w in ["trà sữa", "trân châu", "topping", "kẹo", "bánh", "nước ngọt", "coca", "pepsi"]):
             ans_m = (
-                f"Haha, 'trà sữa 0% đường nhưng full trân châu hoàng kim + kem cheese' là cú lừa kinh điển nhất quả đất! "
-                f"Trân châu làm từ tinh bột sắn nấu đẫm đường đen, làm đường huyết tăng vọt cực nhanh. Với điểm rủi ro <b>{prob_gb:.1%}</b> của bạn, "
-                f"thỉnh thoảng uống 1 ly không topping thì được, chứ uống mỗi ngày là tôi hẹn gặp bạn ở phòng xét nghiệm máu sớm đấy!"
+                "Haha, 'trà sữa 0% đường nhưng full trân châu hoàng kim + kem cheese' là cú lừa kinh điển nhất quả đất! "
+                "Trân châu làm từ tinh bột sắn nấu đẫm đường đen nên làm đường huyết tăng rất nhanh đó."
             )
             ans_f = (
-                f"Đừng để chữ 'ít đường' đánh lừa nha! Nếu thèm quá, bạn hãy chọn trà ô long hoặc hồng trà không đường, "
-                f"topping đổi sang hạt chia hoặc nha đam không đường. Vừa giữ dáng đẹp (BMI của bạn đang là <b>{bmi_val:.1f}</b>), vừa không làm tuyến tụy 'kêu cứu'!"
+                "Nếu thèm quá thì lâu lâu uống 1 ly trà ô long/hồng trà không đường, đổi topping sang hạt chia hoặc nha đam không đường vừa ngon vừa đỡ lo tăng cân nha!"
             )
             return ans_m, ans_f
         if any(w in q for w in ["kiến", "tiểu", "đái", "vệ sinh"]):
             ans_m = (
-                "Nghe tưởng đùa nhưng trong lịch sử y học là thật 100% đấy! Tên bệnh 'Tiểu đường' (Diabetes Mellitus — ngọt như mật) "
-                "xuất phát từ việc khi đường trong máu vượt quá ngưỡng thận (~180 mg/dL), thận không giữ nổi nữa nên đường tràn ra nước tiểu làm kiến bu thật. "
-                "Nhưng thời đại AI rồi, đừng đợi kiến bu mới đi khám nhé — xét nghiệm máu FPG chỉ mất 5 phút thôi!"
+                "Nghe tưởng đùa nhưng trong lịch sử y học là thật 100% đấy! Khi đường trong máu vượt ngưỡng thận (~180 mg/dL), đường tràn ra nước tiểu làm kiến bu thật. "
+                "Nhưng thời đại hiện đại rồi, đừng đợi kiến bu mới đi khám — xét nghiệm máu FPG chỉ mất 5 phút thôi!"
             )
-            ans_f = (
-                f"Haha, dùng kiến để khám bệnh là phương pháp từ... vài thế kỷ trước rồi! Bây giờ bạn chỉ cần nhìn điểm tầm soát trên app của tụi mình "
-                f"(hiện tại của bạn là <b>{prob_gb:.1%}</b>) và đi kiểm tra máu định kỳ là chuẩn khoa học nhất nha!"
-            )
+            ans_f = "Haha, dùng kiến khám bệnh là chuyện của vài thế kỷ trước rồi — bây giờ cứ kiểm tra sức khỏe định kỳ là chuẩn nhất nhé!"
             return ans_m, ans_f
         if any(w in q for w in ["đẹp", "xinh", "tim đập", "người yêu", "crush", "thất tình", "yêu", "cưới", "hẹn hò"]):
             ans_m = (
-                "Haha, nhìn tôi với Bác sĩ Lee Sung-kyung mà tim đập nhanh là triệu chứng 'rung động' chứ không phải tiểu đường đâu! "
-                "Nhưng nói nghiêm túc nhé: nếu lúc đói bụng mà bạn bị <b>tim đập nhanh, vã mồ hôi lạnh, run tay, hoa mắt</b> thì coi chừng đó là "
-                "dấu hiệu <b>hạ đường huyết</b> hoặc rối loạn dung nạp glucose đấy!"
+                "Haha, tim đập nhanh khi gặp người đẹp là triệu chứng 'rung động' chứ không phải bệnh đâu! "
+                "Còn nếu tự dưng đói bụng mà thấy tim đập nhanh, run tay, vã mồ hôi lạnh thì mới cần coi chừng hạ đường huyết nhé."
             )
             ans_f = (
-                "Cảm ơn lời khen ngọt ngào của bạn nha, làm mình cũng đỏ mặt luôn nè! Nhớ là 'ngọt ngào' trong tình cảm thì giúp giảm hormone căng thẳng (cortisol), "
-                "chứ 'ngọt' ở trong mạch máu là tụi mình phải kê đơn ăn kiêng ngay đó!"
+                "Cảm ơn lời khen ngọt ngào của bạn nha! Tình cảm vui vẻ giúp giảm stress rất tốt cho sức khỏe đó — chúc bạn sớm có tin vui nha!"
             )
             return ans_m, ans_f
         if any(w in q for w in ["xét nghiệm", "máu", "fpg", "hba1c"]):
@@ -873,45 +809,37 @@ def generate_doctor_replies(question_text: str, use_live_llm: bool = True) -> tu
                 f"Bạn nên yêu cầu bác sĩ làm <b>Xét nghiệm đường huyết lúc đói (FPG — nhịn ăn 8 tiếng)</b> hoặc <b>HbA1c</b> "
                 f"(đánh giá đường huyết trung bình 3 tháng). Với điểm số <b>{prob_gb:.1%}</b> của bạn, đây là cách kiểm tra chính xác nhất!"
             )
-            ans_f = "Trước ngày đi lấy máu xét nghiệm FPG, tối hôm trước bạn nhớ nhịn ăn từ 22h đêm (chỉ uống nước lọc) và ngủ sớm để kết quả chuẩn nhất nhé!"
+            ans_f = "Tối hôm trước ngày đi lấy máu FPG bạn nhớ nhịn ăn từ 22h đêm (chỉ uống nước lọc) và ngủ sớm để kết quả chuẩn nhất nhé!"
             return ans_m, ans_f
         if any(w in q for w in ["thực đơn", "bài tập", "chế độ ăn"]):
             ans_m = (
-                f"Khi giảm BMI từ <b>{bmi_val:.1f}</b> xuống <b>{lower_bmi:.1f} kg/m²</b>, độ nhạy insulin của cơ thể cải thiện rõ rệt, "
-                f"giúp điểm rủi ro trên mô hình giảm từ <b>{prob_gb:.1%}</b> xuống <b>{prob_whatif:.1%}</b>."
+                f"Khi giảm BMI từ <b>{bmi_val:.1f}</b> xuống <b>{lower_bmi:.1f} kg/m²</b>, độ nhạy insulin cải thiện rõ rệt, giúp điểm rủi ro giảm xuống <b>{prob_whatif:.1%}</b>."
             )
             ans_f = (
-                f"Với chiều cao <b>{height_cm} cm</b> và cân nặng <b>{weight_kg} kg</b> (BMI <b>{bmi_val:.1f}</b>), bạn hãy áp dụng quy tắc Đĩa thức ăn: "
-                f"<b>1/2 rau xanh</b>, <b>1/4 đạm lành mạnh</b> (cá, ức gà, đậu phụ), <b>1/4 tinh bột nguyên cám</b>, kết hợp đi bộ nhanh 30 phút mỗi ngày nha!"
+                f"Với BMI <b>{bmi_val:.1f}</b>, bạn hãy áp dụng quy tắc Đĩa thức ăn: <b>1/2 rau xanh</b>, <b>1/4 đạm</b> (cá, ức gà, đậu phụ), <b>1/4 tinh bột nguyên cám</b>, và đi bộ 30 phút/ngày nha!"
             )
             return ans_m, ans_f
 
+    # Call Free Live AI LLM for ANY general, silly, or custom question!
     if use_live_llm:
-        llm_m, llm_f = call_free_llm_api(question_text)
+        llm_m, llm_f = call_free_llm_api(question_text, lang_code, d_cfg["m_name"], d_cfg["f_name"])
         if llm_m and llm_f:
             return llm_m, llm_f
 
     if lang_code == "vi":
-        advice_tail = (
-            f"Vì điểm của bạn ({prob_gb:.1%}) đang trên ngưỡng {active_th:.2f} nên nhớ đi xét nghiệm máu kiểm tra nhé!"
-            if is_flagged
-            else f"May mắn là điểm của bạn ({prob_gb:.1%}) hiện vẫn nằm trong vùng an toàn dưới ngưỡng {active_th:.2f} đó!"
-        )
         ans_m = (
-            f"Haha, câu hỏi <i>\"{question_text}\"</i> của bạn hay đấy! Liên hệ ngay với hồ sơ sức khỏe của bạn: "
-            f"hiện điểm rủi ro AI của bạn là <b>{prob_gb:.1%}</b> (yếu tố chính: <b>{top_feat_label}</b>). {advice_tail}"
+            f"Haha, câu hỏi <i>\"{question_text}\"</i> nghe thú vị ghê! Theo tôi thì bạn cứ làm điều gì khiến mình thấy thoải mái, "
+            f"vui vẻ và hợp túi tiền nhất lúc này — miễn sao giữ được năng lượng tích cực là tuyệt vời rồi!"
         )
         ans_f = (
-            f"Để mình bổ sung thêm cho bạn nha: với chỉ số BMI <b>{bmi_val:.1f} kg/m²</b> ({height_cm} cm, {weight_kg} kg), "
-            f"chỉ cần bạn giữ tinh thần thoải mái, ăn nhiều rau xanh, bớt đồ ngọt và đi bộ 30 phút mỗi ngày là điểm rủi ro sẽ giảm về <b>{prob_whatif:.1%}</b>!"
+            "Đồng ý hai tay luôn! Mà dù bận rộn hay đi chơi đâu thì cũng nhớ uống đủ nước, ngủ đủ giấc và giữ tinh thần thư giãn nhé — có gì vui cứ kể tụi mình nghe tiếp nha!"
         )
     else:
         ans_m = (
-            f"Great question (<i>\"{question_text}\"</i>)! In medical screening, <b>Recall ({rec_now:.1%})</b> is prioritized over Precision ({prec_now:.1%}) "
-            f"using the <b>F2-Score ({f2_now:.3f})</b> and <b>PR-AUC (0.418)</b> so we don't miss undiagnosed cases. Your current risk score is <b>{prob_gb:.1%}</b>."
+            f"Haha, I love your question (<i>\"{question_text}\"</i>)! Honestly, do whatever helps you recharge and enjoy your day—staying happy and stress-free is great for overall well-being!"
         )
         ans_f = (
-            f"And with your calculated BMI of <b>{bmi_val:.1f} kg/m²</b>, staying active and eating balanced meals will bring your estimated score down toward <b>{prob_whatif:.1%}</b>!"
+            "Totally agree! Wherever you go or whatever you decide, remember to stay hydrated, get good sleep, and have fun!"
         )
     return ans_m, ans_f
 
@@ -972,19 +900,19 @@ with st.container(border=True):
 
     if doc_mode in ["both", "male"]:
         st.markdown(
-            "<div style='display:flex; align-items:flex-start; gap:14px; background:#f8fafc; border:1px solid #cbd5e1; border-left:5px solid #2563eb; "
+            "<div style='display:flex; align-items:flex-start; gap:14px; background:#ffffff; border:1px solid #bfdbfe; border-left:5px solid #1d4ed8; "
             "padding:14px 16px; border-radius:12px; margin-bottom:10px;'>"
-            f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_MALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #2563eb; flex-shrink:0;'/>"
+            f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_MALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #1d4ed8; flex-shrink:0;'/>"
             f"<div style='color:#1e293b; font-size:0.93rem; line-height:1.55;'><b style='color:#1d4ed8;'>{d_cfg['m_name']}:</b> {reply_m}</div>"
             "</div>",
             unsafe_allow_html=True,
         )
     if doc_mode in ["both", "female"]:
         st.markdown(
-            "<div style='display:flex; align-items:flex-start; gap:14px; background:#f8fafc; border:1px solid #cbd5e1; border-left:5px solid #0d9488; "
+            "<div style='display:flex; align-items:flex-start; gap:14px; background:#ffffff; border:1px solid #bae6fd; border-left:5px solid #0284c7; "
             "padding:14px 16px; border-radius:12px; margin-bottom:4px;'>"
-            f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_FEMALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #0d9488; flex-shrink:0;'/>"
-            f"<div style='color:#1e293b; font-size:0.93rem; line-height:1.55;'><b style='color:#0f766e;'>{d_cfg['f_name']}:</b> {reply_f}</div>"
+            f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_FEMALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #0284c7; flex-shrink:0;'/>"
+            f"<div style='color:#1e293b; font-size:0.93rem; line-height:1.55;'><b style='color:#0369a1;'>{d_cfg['f_name']}:</b> {reply_f}</div>"
             "</div>",
             unsafe_allow_html=True,
         )

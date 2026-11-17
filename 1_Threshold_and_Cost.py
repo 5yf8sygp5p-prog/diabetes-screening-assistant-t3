@@ -183,3 +183,21 @@ with c_right:
     st.altair_chart((rates_chart + vline_rates).properties(height=300), use_container_width=True)
 
 st.markdown(t["tc_how_to_read"])
+
+st.markdown("---")
+# Strategy Toolbar: Recall vs Precision & Optimal F2-Score
+rec_now = float(current_pt["test_recall"])
+prec_now = float(current_pt["test_precision"])
+f2_now = (5 * prec_now * rec_now / (4 * prec_now + rec_now)) if (4 * prec_now + rec_now) > 0 else 0.0
+
+st.subheader(
+    "🎛️ Chiến lược Sàng lọc: Tại sao Recall quan trọng hơn Precision? (F2-Score)"
+    if lang_code == "vi"
+    else "🎛️ Screening Strategy: Why Recall Matters More Than Precision (F2-Score)"
+)
+st.info(
+    "**Recall (Độ nhạy) quan trọng hơn Precision** trong tầm soát y tế tại nhà vì bỏ sót ca bệnh (False Negative) tốn kém và nguy hiểm gấp ~5 lần so với 1 lần xét nghiệm kiểm tra (False Positive). "
+    f"Tại ngưỡng hiện tại **τ = {chosen_th:.2f}**: **Recall = {rec_now:.1%}**, **Precision = {prec_now:.1%}**, **F2-Score = {f2_now:.3f}** (F2 đặt trọng số Recall gấp đôi Precision), **PR-AUC = 0.418**."
+    if lang_code == "vi"
+    else f"**Recall (Sensitivity) is more critical than Precision** in at-home screening because missing a case is ~5× worse than a routine lab test. At **τ = {chosen_th:.2f}**: **Recall = {rec_now:.1%}**, **Precision = {prec_now:.1%}**, **F2-Score = {f2_now:.3f}**, **PR-AUC = 0.418**."
+)

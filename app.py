@@ -674,32 +674,74 @@ if not has_run:
 # 9. FREE LIVE AI LLM + UNIVERSAL SMART/WITTY CONVERSATIONAL ENGINE
 # ==============================================================================
 @st.cache_data(show_spinner=False, ttl=300)
+def fetch_internet_knowledge(query: str, lang_key: str) -> str:
+    """Fetches live factual context from Wikipedia & DuckDuckGo APIs (100% free, no key needed)."""
+    import urllib.parse
+
+    snippets = []
+    wiki_lang = {"vi": "vi", "en": "en", "zh": "zh", "fr": "fr"}.get(lang_key, "en")
+
+    # 1. Wikipedia Search + Extract
+    try:
+        search_url = (
+            f"https://{wiki_lang}.wikipedia.org/w/api.php?action=query&list=search"
+            f"&srsearch={urllib.parse.quote(query)}&format=json&utf8=1&srlimit=1"
+        )
+        req = urllib.request.Request(search_url, headers={"User-Agent": "EIU-Assistant/1.0"})
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            hits = data.get("query", {}).get("search", [])
+            if hits:
+                title = hits[0]["title"]
+                sum_url = f"https://{wiki_lang}.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(title)}"
+                req2 = urllib.request.Request(sum_url, headers={"User-Agent": "EIU-Assistant/1.0"})
+                with urllib.request.urlopen(req2, timeout=4) as resp2:
+                    sdata = json.loads(resp2.read().decode("utf-8"))
+                    ext = sdata.get("extract", "").strip()
+                    if ext:
+                        snippets.append(f"[Wikipedia - {title}]: {ext[:450]}")
+    except Exception:
+        pass
+
+    # 2. DuckDuckGo Instant Answer
+    try:
+        ddg_url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1"
+        req3 = urllib.request.Request(ddg_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req3, timeout=4) as resp3:
+            ddata = json.loads(resp3.read().decode("utf-8"))
+            abs_txt = ddata.get("AbstractText", "").strip()
+            if abs_txt:
+                snippets.append(f"[Web Summary]: {abs_txt[:400]}")
+    except Exception:
+        pass
+
+    return "\n".join(snippets)
+
+
+@st.cache_data(show_spinner=False, ttl=300)
 def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f_label: str) -> tuple:
     """
-    Calls free Pollinations AI LLM endpoints so the two doctors can answer ANY question
-    (serious, silly, off-topic, lifestyle, travel, exams, relationships, etc.) directly and naturally.
+    Combines live Internet search (Wikipedia + DuckDuckGo) with free Pollinations AI LLM
+    so the two doctors can accurately and naturally answer ANY question in the world!
     """
     import urllib.parse
 
+    web_context = fetch_internet_knowledge(question_text, lang_key)
     lang_names = {"vi": "Vietnamese", "en": "English", "zh": "Simplified Chinese", "fr": "French"}
     target_lang = lang_names.get(lang_key, "Vietnamese")
+
+    context_block = f"\nLive Internet facts found:\n{web_context}\n" if web_context else ""
     system_prompt = (
-        f"You are roleplaying TWO friendly, witty, down-to-earth AI doctors: "
-        f"1) {doc_m_label} (warm, humorous, sharp) and 2) {doc_f_label} (cheerful, practical, fun). "
-        f"The user can ask ANYTHING—including silly, random, or off-topic life questions (like where to hang out after IELTS, food, dating, movies, coding, weather, etc.). "
-        f"IMPORTANT: Answer the user's ACTUAL question directly, genuinely, and with humor! Do NOT force diabetes or blood sugar statistics into off-topic answers unless it fits as a tiny playful joke at the end. "
-        f"Reply strictly in {target_lang} as TWO short conversational paragraphs separated by '||SPLIT||': "
-        f"Paragraph 1 = Male doctor's direct answer (2-3 sentences). Paragraph 2 = Female doctor's direct follow-up (2-3 sentences). "
-        f"Do not prefix paragraphs with speaker names."
+        f"You are roleplaying TWO friendly, knowledgeable, witty AI doctors: "
+        f"1) {doc_m_label} and 2) {doc_f_label}. "
+        f"Answer the user's question directly, accurately, and naturally in {target_lang} using your general world knowledge"
+        f"{' and the live Internet facts below' if web_context else ''}. "
+        f"Do NOT force diabetes into unrelated topics! "
+        f"Format your reply as TWO short paragraphs separated by '||SPLIT||': "
+        f"Paragraph 1 = {doc_m_label}'s direct answer (2-3 sentences). "
+        f"Paragraph 2 = {doc_f_label}'s fun or helpful follow-up (1-2 sentences). "
+        f"Do not write speaker names before the paragraphs.{context_block}"
     )
-    payload = {
-        "model": "openai",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": question_text},
-        ],
-        "temperature": 0.85,
-    }
 
     def _split_reply(txt: str):
         txt = txt.strip()
@@ -714,37 +756,63 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
         lines = [ln.strip() for ln in txt.splitlines() if ln.strip()]
         if len(lines) >= 2:
             return lines[0], " ".join(lines[1:])
-        return txt, None
+        # Split a single paragraph cleanly into 2 parts by sentences so we NEVER discard a real LLM answer!
+        sents = re.split(r"(?<=[.!?])\s+", txt)
+        if len(sents) >= 2:
+            mid = max(1, len(sents) // 2)
+            return " ".join(sents[:mid]), " ".join(sents[mid:])
+        return txt, "Đồng ý với quan điểm trên! Nếu bạn muốn hỏi thêm chi tiết gì cứ nhắn tụi mình nhé!" if lang_key == "vi" else "Totally agree! Feel free to ask us anything else!"
 
-    # Attempt 1: OpenAI-compatible POST endpoint
+    # Attempt 1: Pollinations GET (fast & reliable)
     try:
-        req = urllib.request.Request(
-            "https://text.pollinations.ai/openai",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            raw = json.loads(resp.read().decode("utf-8"))
-            content = raw["choices"][0]["message"]["content"]
+        full_prompt = f"{system_prompt}\n\nUser question: {question_text}"
+        url = "https://text.pollinations.ai/" + urllib.parse.quote(full_prompt) + "?model=openai"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=14) as resp:
+            content = resp.read().decode("utf-8")
             m_ans, f_ans = _split_reply(content)
             if m_ans and f_ans:
                 return m_ans, f_ans
     except Exception:
         pass
 
-    # Attempt 2: Direct Pollinations text GET endpoint
+    # Attempt 2: Pollinations OpenAI POST
     try:
-        full_prompt = f"{system_prompt}\n\nUser question: {question_text}"
-        url = "https://text.pollinations.ai/" + urllib.parse.quote(full_prompt)
-        req2 = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req2, timeout=10) as resp2:
-            content2 = resp2.read().decode("utf-8")
+        payload = {
+            "model": "openai",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": question_text},
+            ],
+            "temperature": 0.7,
+        }
+        req2 = urllib.request.Request(
+            "https://text.pollinations.ai/openai",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req2, timeout=12) as resp2:
+            raw = json.loads(resp2.read().decode("utf-8"))
+            content2 = raw["choices"][0]["message"]["content"]
             m_ans, f_ans = _split_reply(content2)
             if m_ans and f_ans:
                 return m_ans, f_ans
     except Exception:
         pass
+
+    # Attempt 3: Live Wikipedia / DuckDuckGo summary fallback if LLM is busy
+    if web_context:
+        clean_web = re.sub(r"\[[^\]]+\]:\s*", "", web_context).replace("\n", " ")
+        if lang_key == "vi":
+            return (
+                f"Theo thông tin tra cứu được từ Internet: {clean_web[:380]}...",
+                "Đó là thông tin tổng hợp nhanh từ Wikipedia/Web cho câu hỏi của bạn đó! Bạn muốn hỏi thêm gì không nè?",
+            )
+        return (
+            f"Here is what I found from live Internet sources: {clean_web[:380]}...",
+            "Hope that answers your question! Feel free to ask anything else.",
+        )
 
     return None, None
 

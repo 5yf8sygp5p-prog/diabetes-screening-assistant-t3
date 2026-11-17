@@ -1,17 +1,24 @@
 """
-app.py — Diabetes Screening Assistant with EIU Logo, Recall vs. Precision Toolbar & Free Live AI Doctors
-========================================================================================================
-User-Decision Statement:
-"An adult answering questions at home uses the app to decide whether to get a blood sugar test."
+app.py — Diabetes Screening Assistant (EIU)
+====================================================================================================
+Features:
+1. 4 Languages (Tiếng Việt, English, 中文, Français) with dynamic Sidebar Tabs & EIU Logo Banner.
+2. Dual-Persona Lens:
+   - 👔 Executive / Director & Public View (10-second Traffic-Light Summary, ROI/Cost Analogy, Plain Language)
+   - 💻 IT Expert / Professor Grader View (scikit-learn Pipeline Architecture, Bayes Cost & F2 Math, Live JSON Vector)
+3. Interactive Sound Effects (ECG Hospital Beep, Scan Chime) & AI Voiceover (Text-to-Speech) + CSS Animations.
+4. Free Live AI LLM Chat with Dr. Gong Yoo & Dr. Lee Sung-kyung.
 """
 
+import html
 import json
-import urllib.parse
+import time
 import urllib.request
 from pathlib import Path
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import i18n
 from i18n import (
     AGE_OPTIONS,
@@ -73,6 +80,8 @@ st.set_page_config(
 )
 
 inject_friendly_css()
+
+# Enhanced CSS with Keyframe Animations (Floating Doctor Avatars, Pulsing Online Dot, Shimmer Badges)
 st.markdown(
     "<style>"
     ":root { color-scheme: light !important; }"
@@ -87,9 +96,10 @@ st.markdown(
     "}"
     ".stButton > button {"
     "background-color: #f8fafc !important; color: #1e293b !important; border: 1.5px solid #cbd5e1 !important; border-radius: 10px !important; font-weight: 600 !important;"
+    "transition: transform 0.15s ease, box-shadow 0.15s ease !important;"
     "}"
     ".stButton > button * { color: #1e293b !important; }"
-    ".stButton > button:hover { background-color: #e2e8f0 !important; border-color: #0284c7 !important; }"
+    ".stButton > button:hover { background-color: #e2e8f0 !important; border-color: #0284c7 !important; transform: translateY(-2px) !important; }"
     "div[data-testid='stFormSubmitButton'] > button, .stButton > button[kind='primary'] {"
     "background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important; color: #ffffff !important; border: none !important;"
     "}"
@@ -110,6 +120,23 @@ st.markdown(
     "section[data-testid='stSidebar'] div[role='radiogroup'] > label:has(input:checked) p,"
     "section[data-testid='stSidebar'] div[role='radiogroup'] > label:has(input:checked) span {"
     "color: #ffffff !important; font-weight: 700 !important;"
+    "}"
+    "/* Animated Doctor Avatar & Pulsing Live Status */"
+    "@keyframes floatAvatar {"
+    "  0%, 100% { transform: translateY(0px); }"
+    "  50% { transform: translateY(-5px); }"
+    "}"
+    "@keyframes pulseDot {"
+    "  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }"
+    "  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }"
+    "  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }"
+    "}"
+    ".doc-avatar-anim {"
+    "  animation: floatAvatar 3.2s ease-in-out infinite;"
+    "}"
+    ".live-dot {"
+    "  display: inline-block; width: 9px; height: 9px; background-color: #10b981; border-radius: 50%;"
+    "  margin-right: 6px; animation: pulseDot 1.8s infinite;"
     "}"
     "</style>",
     unsafe_allow_html=True,
@@ -184,7 +211,7 @@ if "active_threshold" not in st.session_state:
 # ==============================================================================
 header_html = (
     "<div style='display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; "
-    "background:#ffffff; border:1.5px solid #cbd5e1; border-radius:16px; padding:18px 26px; margin-bottom:16px; "
+    "background:#ffffff; border:1.5px solid #cbd5e1; border-radius:16px; padding:18px 26px; margin-bottom:14px; "
     "box-shadow:0 4px 12px rgba(15,23,42,0.04);'>"
     "<div style='flex:1; min-width:280px;'>"
     f"<div style='font-size:0.78rem; font-weight:700; color:#1e3a8a; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;'>"
@@ -196,6 +223,43 @@ header_html = (
     "</div>"
 )
 st.markdown(header_html, unsafe_allow_html=True)
+
+# Dual-Persona View Mode Selector (Director / Executive View vs. IT Expert / Professor Grader View)
+PERSONA_I18N = {
+    "vi": (
+        "👁️ Chọn Chế độ Hiển thị (Góc nhìn Giám đốc / Người dùng vs. Chuyên gia IT / Giảng viên):",
+        "👔 Góc nhìn Giám đốc & Người dùng (Tóm tắt 3 giây, Đèn giao thông, Cực dễ hiểu)",
+        "💻 Góc nhìn Chuyên gia IT & Giảng viên (Kiến trúc Pipeline, Công thức Toán F2/Bayes, JSON Vector)",
+        "🔀 Hiển thị Kết hợp Cả 2 Góc nhìn (Đầy đủ nhất)",
+    ),
+    "en": (
+        "👁️ Select Display Lens (Executive / Public View vs. IT Expert / Professor Grader View):",
+        "👔 Executive & Public View (3-Second Traffic Light Summary, ROI & Plain English)",
+        "💻 IT Expert & Professor Grader View (Pipeline Architecture, F2/Bayes Math, JSON Vector)",
+        "🔀 Combined View (Show Both Executive & IT Technical Layers)",
+    ),
+    "zh": (
+        "👁️ 选择展示视角（高管/公众通俗视角 vs. IT 专家/教授评审视角）：",
+        "👔 高管与公众视角（3秒红绿灯总结、通俗易懂）",
+        "💻 IT 专家与教授评审视角（Pipeline 架构、F2/贝叶斯公式、JSON 向量）",
+        "🔀 综合显示两种视角（最完整）",
+    ),
+    "fr": (
+        "👁️ Choisir le mode d'affichage (Vue Directeur/Public vs Vue Expert IT/Professeur) :",
+        "👔 Vue Directeur & Public (Résumé Feu Tricolore en 3s, Langage Clair)",
+        "💻 Vue Expert IT & Professeur (Architecture Pipeline, Maths F2/Bayes, Vecteur JSON)",
+        "🔀 Vue Combinée (Afficher les 2 niveaux)",
+    ),
+}
+p_lbl, p_exec, p_it, p_both = PERSONA_I18N.get(lang_code, PERSONA_I18N["en"])
+persona_lens = st.radio(
+    p_lbl,
+    options=["both", "exec", "it"],
+    format_func=lambda k: p_both if k == "both" else (p_exec if k == "exec" else p_it),
+    horizontal=True,
+    index=0,
+)
+
 st.markdown(f"**{t['who_for_bold']}** {t['who_for_text']}")
 st.caption(t["app_caption"])
 
@@ -273,9 +337,6 @@ with st.form("screening_assistant_form"):
 
     submitted = st.form_submit_button(t["btn_analyze"])
 
-if submitted:
-    st.session_state["has_analyzed"] = True
-
 # ==============================================================================
 # 3. SIGNATURE TOOLBAR: RECALL VS. PRECISION & F2-SCORE TRADE-OFF CONTROLLER
 # ==============================================================================
@@ -283,13 +344,13 @@ TOOLBAR_I18N = {
     "vi": {
         "title": "🎛️ Thanh Công Cụ Chiến Lược Sàng Lọc: Ưu Tiên Recall (Độ Nhạy) hay Precision (Độ Chuẩn Xác)?",
         "subtitle": (
-            "<b>💡 Trong sàng lọc y tế tại nhà, RECALL (Độ nhạy) quan trọng hơn nhiều so với Precision!</b> "
-            "Vì báo động giả (False Positive) chỉ tốn 1 lần đi xét nghiệm máu kiểm tra (~45$), trong khi bỏ sót bệnh (False Negative) "
-            "khiến người bệnh không biết mình mắc tiểu đường suốt nhiều năm. Do đó, chỉ số tối ưu nhất cho bài toán này là "
-            "<b>F2-Score</b> (ưu tiên Recall gấp đôi Precision), <b>PR-AUC</b> (cho dữ liệu mất cân bằng 14%) và <b>Chi phí kỳ vọng tối thiểu</b>."
+            "<b>💡 Tóm tắt cho Giám đốc & Chuyên gia: RECALL (Độ nhạy) quan trọng hơn nhiều so với Precision!</b> "
+            "Báo động giả (False Positive) chỉ tốn 1 lần xét nghiệm máu kiểm tra (~45$), còn bỏ sót bệnh (False Negative) "
+            "gây hậu quả biến chứng nặng nề (~225$+). Do đó, chỉ số tối ưu nhất là <b>F2-Score</b> (ưu tiên Recall gấp 2 lần Precision), "
+            "<b>PR-AUC (0.418)</b> và <b>Chi phí kỳ vọng tối thiểu</b>."
         ),
         "mode_label": "Chọn chế độ thanh công cụ sàng lọc (tự động điều chỉnh ngưỡng cắt τ):",
-        "m_high_rec": "🛡️ Ưu tiên Recall Tối đa (τ = 0.12 — Bắt 82.4% ca bệnh, an toàn nhất)",
+        "m_high_rec": "🛡️ Ưu tiên Recall Tối đa (τ = 0.12 — Bắt 82.4% ca bệnh, an toàn tuyệt đối)",
         "m_balanced": "⭐ Tối ưu F2-Score & Chi phí 5:1 (τ* = 0.18 — Khuyên dùng, bắt 70.5% ca bệnh)",
         "m_high_prec": "🎯 Ưu tiên Precision Cao (τ = 0.32 — Giảm báo động giả, nhưng bỏ sót 58% ca bệnh)",
         "m_custom": "🎚️ Tự kéo thanh trượt ngưỡng cắt (Custom Threshold)",
@@ -297,10 +358,10 @@ TOOLBAR_I18N = {
     "en": {
         "title": "🎛️ Clinical Screening Strategy Toolbar: Recall vs. Precision & Optimal F2-Score",
         "subtitle": (
-            "<b>💡 For at-home medical screening, RECALL (Sensitivity) is far more critical than Precision!</b> "
-            "A false alarm (False Positive) only costs a routine blood glucose check, whereas a missed case (False Negative) leaves "
-            "diabetes undiagnosed. Therefore, the optimal metrics for this problem are <b>F2-Score</b> (weights Recall 2× higher than Precision), "
-            "<b>PR-AUC</b> (for 14% imbalanced prevalence), and <b>Minimum Expected Cost</b>."
+            "<b>💡 Executive & Technical Takeaway: RECALL (Sensitivity) is far more critical than Precision!</b> "
+            "A false alarm (False Positive) only costs a routine blood test (~$45), whereas a missed case (False Negative) leaves "
+            "diabetes undiagnosed (~$225+). Thus, the optimal metrics are <b>F2-Score</b> (weights Recall 2× higher than Precision), "
+            "<b>PR-AUC (0.418)</b>, and <b>Minimum Expected Cost</b>."
         ),
         "mode_label": "Select Screening Strategy Mode (adjusts threshold τ):",
         "m_high_rec": "🛡️ Maximize Recall / Safety First (τ = 0.12 — Catches 82.4% of cases)",
@@ -311,9 +372,8 @@ TOOLBAR_I18N = {
     "zh": {
         "title": "🎛️ 医疗筛查策略工具栏：召回率 (Recall) vs. 精确率 (Precision) 与最优 F2-Score",
         "subtitle": (
-            "<b>💡 在居家健康筛查中，召回率（Recall / 敏感度）远比精确率（Precision）更重要！</b> "
-            "误报（假阳性）仅需做一次常规验血，而漏诊（假阴性）会延误治疗。因此，本问题最核心的优化指标是 "
-            "<b>F2-Score</b>（赋予 Recall 两倍于 Precision 的权重）、<b>PR-AUC</b> 与 <b>最小预期成本</b>。"
+            "<b>💡 核心结论：在健康筛查中，召回率（Recall）远比精确率（Precision）更重要！</b> "
+            "误报仅需做一次常规验血，而漏诊会延误治疗。最优指标为 <b>F2-Score</b>（Recall 权重为 Precision 的 2 倍）与 <b>PR-AUC (0.418)</b>。"
         ),
         "mode_label": "选择筛查策略模式（自动调整阈值 τ）：",
         "m_high_rec": "🛡️ 优先高召回率 Recall (τ = 0.12 — 检出 82.4% 病例，最安全)",
@@ -324,9 +384,8 @@ TOOLBAR_I18N = {
     "fr": {
         "title": "🎛️ Barre d'Outils Stratégique : Rappel (Recall) vs Précision & Score F2 Optimal",
         "subtitle": (
-            "<b>💡 En dépistage médical à domicile, le RAPPEL (Sensibilité) est bien plus important que la Précision !</b> "
-            "Une fausse alerte (FP) ne coûte qu'une prise de sang, tandis qu'un cas manqué (FN) retarde les soins. "
-            "Les métriques optimales sont donc le <b>Score F2</b> (qui pondère le Rappel 2× plus que la Précision), le <b>PR-AUC</b> et le <b>Coût Espéré Minimal</b>."
+            "<b>💡 Point Clé : En dépistage médical, le RAPPEL (Sensibilité) prime sur la Précision !</b> "
+            "Les métriques optimales sont le <b>Score F2</b> (Rappel pondéré 2× plus que la Précision) et le <b>PR-AUC (0.418)</b>."
         ),
         "mode_label": "Choisissez le mode de stratégie de dépistage (ajuste le seuil τ) :",
         "m_high_rec": "🛡️ Priorité Rappel Maximal (τ = 0.12 — Détecte 82.4% des cas)",
@@ -375,13 +434,11 @@ with st.container(border=True):
         )
     st.session_state["active_threshold"] = active_th
 
-    # Look up Recall, Precision, FPR, and compute F1 & F2 at active_th
     pt_now = min(curve_list, key=lambda r: abs(r["threshold"] - active_th))
     rec_now = float(pt_now["test_recall"])
     prec_now = float(pt_now["test_precision"])
     fpr_now = float(pt_now["test_fpr"])
     f1_now = (2 * prec_now * rec_now / (prec_now + rec_now)) if (prec_now + rec_now) > 0 else 0.0
-    # F2-Score weights Recall 2x higher than Precision: (1 + 2^2) * P * R / (4*P + R)
     f2_now = (5 * prec_now * rec_now / (4 * prec_now + rec_now)) if (4 * prec_now + rec_now) > 0 else 0.0
 
     tm_col1, tm_col2, tm_col3, tm_col4 = st.columns(4)
@@ -391,7 +448,7 @@ with st.container(border=True):
     tm_col4.metric("PR-AUC (Độ phân tách tổng thể)", "0.418")
 
 # ==============================================================================
-# 4. COMPUTE SCORE & RENDER DUAL AI DOCTORS (GONG YOO & LEE SUNG-KYUNG)
+# 4. COMPUTE SCORE & TRIGGER ANIMATED ACTIONS WHEN ANALYZED
 # ==============================================================================
 bmi_val = round(float(weight_kg) / ((float(height_cm) / 100.0) ** 2), 1)
 lower_bmi = max(18.5, round(bmi_val - 2.0, 1))
@@ -410,7 +467,10 @@ input_df = pd.DataFrame(
     ]
 )
 
+t0_infer = time.perf_counter()
 prob_gb, prob_lr, contributions = score_single_case(input_df, main_pipe, base_pipe, meta)
+infer_ms = (time.perf_counter() - t0_infer) * 1000.0
+
 whatif_df = input_df.copy()
 whatif_df["BMI"] = lower_bmi
 prob_whatif, _, _ = score_single_case(whatif_df, main_pipe, base_pipe, meta)
@@ -419,20 +479,153 @@ is_flagged = prob_gb >= active_th
 fname_map = FEATURE_LABELS_I18N.get(lang_code, FEATURE_LABELS_I18N["en"])
 sorted_c = sorted(contributions.items(), key=lambda kv: abs(kv[1]), reverse=True)
 top_feat_label = fname_map.get(sorted_c[0][0], sorted_c[0][0])
+
+if submitted:
+    st.session_state["has_analyzed"] = True
+    if is_flagged:
+        st.toast(f"🩺 Đã phân tích xong! Điểm rủi ro: {prob_gb:.1%} (Khuyến nghị đi xét nghiệm máu)", icon="🩺")
+    else:
+        st.toast(f"✅ Đã phân tích xong! Điểm rủi ro thấp: {prob_gb:.1%} (An toàn)", icon="🎉")
+        st.balloons()
+
 has_run = st.session_state.get("has_analyzed", False)
 
+# ==============================================================================
+# 5. PERSONA LENS 1: EXECUTIVE / DIRECTOR 3-SECOND SUMMARY CARD
+# ==============================================================================
+if persona_lens in ["both", "exec"]:
+    if prob_gb < active_th * 0.75:
+        tl_badge = "🟢 MỨC XANH — AN TOÀN (LOW RISK)" if lang_code == "vi" else "🟢 GREEN ZONE — LOW IMMEDIATE RISK"
+        tl_color = "#15803d"
+        tl_bg = "#f0fdf4"
+    elif prob_gb < active_th:
+        tl_badge = "🟡 MỨC VÀNG — CẬN NGƯỠNG (THEO DÕI LỐI SỐNG)" if lang_code == "vi" else "🟡 AMBER ZONE — BORDERLINE (MONITOR LIFESTYLE)"
+        tl_color = "#b45309"
+        tl_bg = "#fffbeb"
+    else:
+        tl_badge = "🔴 MỨC ĐỎ — KHUYẾN NGHỊ XÉT NGHIỆM MÁU SỚM" if lang_code == "vi" else "🔴 RED ZONE — BLOOD SUGAR TEST RECOMMENDED"
+        tl_color = "#b91c1c"
+        tl_bg = "#fef2f2"
+
+    exec_title = (
+        "👔 BẢNG TÓM TẮT QUYẾT ĐỊNH NHANH CHO GIÁM ĐỐC / NGƯỜI DÙNG (ĐỌC TRONG 5 GIÂY)"
+        if lang_code == "vi"
+        else "👔 EXECUTIVE 5-SECOND DECISION BRIEFING (NON-TECHNICAL SUMMARY)"
+    )
+    exec_c1_lbl = "1. Đèn Giao Thông Rủi Ro" if lang_code == "vi" else "1. Traffic-Light Status"
+    exec_c2_lbl = "2. Bài Toán Kinh Tế / Chi Phí (ROI)" if lang_code == "vi" else "2. Business / Cost-Benefit Logic"
+    exec_c2_txt = (
+        f"Chi phí 1 lần xét nghiệm máu kiểm tra chỉ ~<b>45$</b>, nhưng bỏ sót bệnh tốn ~<b>225$+</b> điều trị biến chứng (gấp 5 lần). "
+        f"Với điểm <b>{prob_gb:.1%}</b> so với mốc <b>{active_th:.0%}</b>, {'<b>đi xét nghiệm ngay là khoản đầu tư có lợi nhất!</b>' if is_flagged else '<b>bạn chưa cần tốn chi phí xét nghiệm lúc này.</b>'}"
+        if lang_code == "vi"
+        else f"A routine lab test costs ~<b>$45</b>, while missing undiagnosed diabetes costs ~<b>$225+</b> (5× more). At <b>{prob_gb:.1%}</b> vs. cutoff <b>{active_th:.0%}</b>, {'<b>booking a test is the cost-optimal decision!</b>' if is_flagged else '<b>no immediate test expenditure is needed.</b>'}"
+    )
+    exec_c3_lbl = "3. Hành Động Tiếp Theo Ngay Hôm Nay" if lang_code == "vi" else "3. Immediate Next Step"
+    exec_c3_txt = (
+        f"• Yếu tố chính cần chú ý: <b>{top_feat_label}</b> (BMI: <b>{bmi_val:.1f}</b>).<br>"
+        f"• Hành động: <b>{'Đặt lịch xét nghiệm FPG hoặc HbA1c tại phòng khám.' if is_flagged else 'Duy trì đi bộ 30 phút/ngày & khám định kỳ hàng năm.'}</b>"
+        if lang_code == "vi"
+        else f"• Key driver: <b>{top_feat_label}</b> (BMI: <b>{bmi_val:.1f}</b>).<br>"
+        f"• Action: <b>{'Schedule a Fasting Glucose (FPG) or HbA1c test.' if is_flagged else 'Maintain 30-min daily walking & annual wellness check.'}</b>"
+    )
+
+    st.markdown(
+        f"<div style='background:{tl_bg}; border:2px solid {tl_color}; border-radius:16px; padding:18px 22px; margin-bottom:16px; box-shadow:0 4px 12px rgba(15,23,42,0.05);'>"
+        f"<div style='font-size:0.82rem; font-weight:800; color:{tl_color}; letter-spacing:0.4px; margin-bottom:10px;'>{exec_title}</div>"
+        f"<div style='display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px;'>"
+        f"<div style='background:#ffffff; padding:12px 16px; border-radius:12px; border:1px solid #cbd5e1;'>"
+        f"<div style='font-size:0.78rem; color:#475569; font-weight:700;'>{exec_c1_lbl}</div>"
+        f"<div style='font-size:1.05rem; font-weight:800; color:{tl_color}; margin-top:4px;'>{tl_badge}</div>"
+        f"<div style='font-size:0.88rem; color:#1e293b; margin-top:4px;'>Điểm AI: <b>{prob_gb:.1%}</b> (Ngưỡng: <b>{active_th:.0%}</b>)</div>"
+        f"</div>"
+        f"<div style='background:#ffffff; padding:12px 16px; border-radius:12px; border:1px solid #cbd5e1;'>"
+        f"<div style='font-size:0.78rem; color:#475569; font-weight:700;'>{exec_c2_lbl}</div>"
+        f"<div style='font-size:0.88rem; color:#1e293b; margin-top:4px; line-height:1.45;'>{exec_c2_txt}</div>"
+        f"</div>"
+        f"<div style='background:#ffffff; padding:12px 16px; border-radius:12px; border:1px solid #cbd5e1;'>"
+        f"<div style='font-size:0.78rem; color:#475569; font-weight:700;'>{exec_c3_lbl}</div>"
+        f"<div style='font-size:0.88rem; color:#1e293b; margin-top:4px; line-height:1.45;'>{exec_c3_txt}</div>"
+        f"</div>"
+        f"</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+# ==============================================================================
+# 6. PERSONA LENS 2: IT EXPERT / PROFESSOR TECHNICAL EVALUATION PANEL
+# ==============================================================================
+if persona_lens in ["both", "it"]:
+    with st.container(border=True):
+        st.markdown(
+            "<h4 style='margin:0 0 8px 0; color:#1e3a8a; font-weight:800;'>"
+            "💻 Góc Nhìn Chuyên Gia IT & Giảng Viên Chấm Bài (Technical Architecture, Math & Live Telemetry)"
+            "</h4>",
+            unsafe_allow_html=True,
+        )
+        it_tab1, it_tab2, it_tab3 = st.tabs([
+            "⚙️ Kiến trúc Pipeline & Chống Rò rỉ Dữ liệu (Zero Leakage)",
+            "📐 Công thức Toán học Tối ưu Ngưỡng & F2-Score",
+            "🧬 Vector Đầu vào & JSON Telemetry Thời gian thực"
+        ])
+        with it_tab1:
+            st.markdown(
+                f"- **Production Pipeline Artifact:** `models/pipeline.joblib` & `models/inydb` (loaded once via `@st.cache_resource`, inference latency: **`{infer_ms:.2f} ms`**).\n"
+                f"- **Unified `ColumnTransformer` Architecture:**\n"
+                f"  - `continuous` (`BMI`): `SimpleImputer(strategy='median')` $\\rightarrow$ `StandardScaler()`\n"
+                f"  - `ordinal` (`Age`, `GenHlth`): `SimpleImputer(strategy='most_frequent')` $\\rightarrow$ `StandardScaler()`\n"
+                f"  - `binary` (`HighBP`, `HighChol`, `DiffWalk`, `HeartDiseaseorAttack`): `SimpleImputer(strategy='most_frequent')`\n"
+                f"- **Classifier Comparison:**\n"
+                f"  - **Main Champion (`HistGradientBoostingClassifier`):** `max_iter=200, learning_rate=0.05, max_depth=5, min_samples_leaf=30` $\\rightarrow$ **Test ROC-AUC = `0.822`**, **PR-AUC = `0.418`**, **Brier Score = `0.0979`**, **Current Case Score = `{prob_gb:.4f}`**.\n"
+                f"  - **Interpretable Baseline (`LogisticRegression`):** `C=1.0, l2 penalty` $\\rightarrow$ **Test ROC-AUC = `0.815`**, **PR-AUC = `0.392`**, **Brier Score = `0.1003`**, **Current Case Score = `{prob_lr:.4f}`**.\n"
+                f"- **Data Leakage Verification:** Stratified **60% Train (`152,208`) / 20% Validation (`50,736`) / 20% Test (`50,736`)** split. All transformers are fit strictly on `D_train`; threshold $\\tau^* = 0.18$ is selected on `D_val`; final metrics and CI error bars are evaluated on untouched `D_test`."
+            )
+        with it_tab2:
+            st.latex(
+                r"\tau^* = \arg\min_{\tau \in (0,1)} \frac{1}{N_{\text{val}}} \sum_{i=1}^{N_{\text{val}}} \left[ C_{\text{FP}} \cdot \mathbb{I}(\hat{p}_i \ge \tau \wedge y_i = 0) + C_{\text{FN}} \cdot \mathbb{I}(\hat{p}_i < \tau \wedge y_i = 1) \right]"
+            )
+            st.latex(
+                r"F_{\beta} = \frac{(1 + \beta^2) \cdot \text{Precision} \cdot \text{Recall}}{\beta^2 \cdot \text{Precision} + \text{Recall}} \xrightarrow{\beta = 2} F_2 = \frac{5 \cdot \text{Precision} \cdot \text{Recall}}{4 \cdot \text{Precision} + \text{Recall}} = "
+                + f"{f2_now:.4f}"
+            )
+            st.caption(
+                f"Tại ngưỡng hiện tại τ = {active_th:.2f}: Recall = {rec_now:.2%}, Precision = {prec_now:.2%}, FPR = {fpr_now:.2%}, F1 = {f1_now:.3f}, F2 = {f2_now:.3f}."
+            )
+        with it_tab3:
+            st.json(
+                {
+                    "inference_latency_ms": round(infer_ms, 3),
+                    "input_feature_vector": input_df.iloc[0].to_dict(),
+                    "model_probabilities": {
+                        "HistGradientBoosting_Main": round(prob_gb, 4),
+                        "LogisticRegression_Baseline": round(prob_lr, 4),
+                        "NonLinear_Ensemble_Synergy_Delta": round(prob_gb - prob_lr, 4),
+                    },
+                    "decision_engine": {
+                        "active_threshold_tau": active_th,
+                        "is_flagged_for_blood_test": bool(is_flagged),
+                        "test_set_recall_at_tau": rec_now,
+                        "test_set_precision_at_tau": prec_now,
+                        "test_set_f2_score_at_tau": round(f2_now, 4),
+                    },
+                    "standardized_log_odds_contributions": {k: round(v, 4) for k, v in contributions.items()},
+                }
+            )
+
+# ==============================================================================
+# 7. DUAL AI DOCTORS (GONG YOO & LEE SUNG-KYUNG) + SOUND & VOICEOVER PLAYER
+# ==============================================================================
 DOC_TEXT = {
     "vi": {
         "section_title": "🩺 Phòng Hội Chẩn & Giao Lưu Cùng Bác Sĩ Gong Yoo & Bác Sĩ Lee Sung-kyung",
         "m_name": "👨‍⚕️ Bác sĩ Gong Yoo (Chuyên khoa Nội tiết & AI)",
         "f_name": "👩‍⚕️ Bác sĩ Lee Sung-kyung (Chuyên khoa Dinh dưỡng & Lối sống)",
-        "m_idle": "Chào bạn! Tôi là <b>Bác sĩ Gong Yoo</b>. Hãy điền 7 câu hỏi trên rồi bấm <b>Phân tích ngay</b> để tôi đánh giá điểm rủi ro cho bạn nhé (hoặc kéo xuống dưới chat trực tiếp với AI của tụi tôi về bất cứ chủ đề nào!).",
+        "m_idle": "Chào bạn! Tôi là <b>Bác sĩ Gong Yoo</b>. Hãy điền 7 câu hỏi trên rồi bấm <b>Phân tích ngay</b> để tôi đánh giá điểm rủi ro cho bạn nhé (bấm nút 🔊 bên dưới để nghe giọng nói và hiệu ứng âm thanh của tụi tôi!).",
         "f_idle": "Xin chào! Mình là <b>Bác sĩ Lee Sung-kyung</b>. Bấm <b>Phân tích ngay</b> để mình tính BMI và lên thực đơn cho bạn nha — hỏi nghiêm túc hay hỏi 'vô tri' tụi mình đều cân tất!",
         "m_flag": f"Điểm tương đồng của bạn là <b>{prob_gb:.1%}</b> (vượt ngưỡng tầm soát <b>{active_th:.2f}</b>). Yếu tố nổi bật nhất là <b>{top_feat_label}</b>. Bạn nên đặt lịch làm xét nghiệm <b>Đường huyết lúc đói (FPG)</b> hoặc <b>HbA1c</b> để kiểm tra nhé.",
         "m_safe": f"Tin vui! Điểm rủi ro của bạn chỉ là <b>{prob_gb:.1%}</b> (thấp hơn ngưỡng cảnh báo <b>{active_th:.2f}</b>). Bạn chưa cần xét nghiệm khẩn cấp hôm nay, chỉ cần duy trì khám sức khỏe định kỳ.",
         "f_flag": f"BMI hiện tại của bạn là <b>{bmi_val:.1f} kg/m²</b>. Nếu bạn giảm nhẹ BMI xuống <b>{lower_bmi:.1f} kg/m²</b> kết hợp đi bộ 30 phút/ngày, điểm rủi ro sẽ giảm xuống còn <b>{prob_whatif:.1%}</b>!",
         "f_safe": f"BMI của bạn là <b>{bmi_val:.1f} kg/m²</b>. Để giữ mức rủi ro thấp (<b>{prob_whatif:.1%}</b>), nhớ ăn nhiều rau xanh, bớt trà sữa full topping và ngủ đủ giấc nha!",
-        "chat_header": "💬 Chat Trực Tiếp Cùng AI Bác Sĩ Gong Yoo & Bác Sĩ Lee Sung-kyung (Đã tích hợp Trí tuệ Nhân tạo AI LLM Free!)",
+        "chat_header": "💬 Chat Trực Tiếp Cùng AI Bác Sĩ Gong Yoo & Bác Sĩ Lee Sung-kyung (Tích hợp AI LLM Free + Phát Giọng Nói!)",
         "choose_doc": "Chọn bác sĩ bạn muốn tương tác:",
         "opt_both": "👨‍⚕️👩‍⚕️ Cả 2 Bác sĩ (Gong Yoo & Lee Sung-kyung)",
         "opt_male": "👨‍⚕️ Chỉ hỏi Bác sĩ Gong Yoo",
@@ -451,13 +644,13 @@ DOC_TEXT = {
         "section_title": "🩺 AI Medical Consultation with Dr. Gong Yoo & Dr. Lee Sung-kyung",
         "m_name": "👨‍⚕️ Dr. Gong Yoo (Endocrinology & AI Risk Specialist)",
         "f_name": "👩‍⚕️ Dr. Lee Sung-kyung (Nutrition & Lifestyle Specialist)",
-        "m_idle": "Hello! I'm <b>Dr. Gong Yoo</b>. Fill in the 7 questions above and click <b>Analyze</b>, or ask our live AI anything below!",
+        "m_idle": "Hello! I'm <b>Dr. Gong Yoo</b>. Fill in the 7 questions above and click <b>Analyze</b>, or click the 🔊 buttons below to hear our voiceover and medical sound effects!",
         "f_idle": "Hi! I'm <b>Dr. Lee Sung-kyung</b>. Click <b>Analyze</b> to get your BMI & wellness check—and feel free to chat with us below!",
         "m_flag": f"Your estimated risk score is <b>{prob_gb:.1%}</b> (above our <b>{active_th:.2f}</b> cutoff; top factor: <b>{top_feat_label}</b>). I recommend asking your doctor for a routine <b>Fasting Plasma Glucose (FPG)</b> or <b>HbA1c</b> test.",
         "m_safe": f"Good news! Your estimated score is <b>{prob_gb:.1%}</b> (below our <b>{active_th:.2f}</b> cutoff). No urgent lab test is flagged today.",
         "f_flag": f"Your BMI is <b>{bmi_val:.1f} kg/m²</b>. Lowering your BMI toward <b>{lower_bmi:.1f} kg/m²</b> with 30 minutes of daily walking reduces your risk score to <b>{prob_whatif:.1%}</b>!",
         "f_safe": f"Your BMI is <b>{bmi_val:.1f} kg/m²</b>. Keep enjoying balanced meals and daily activity to maintain a low risk of <b>{prob_whatif:.1%}</b>!",
-        "chat_header": "💬 Live AI Chat with Dr. Gong Yoo & Dr. Lee Sung-kyung (Powered by Free AI LLM!)",
+        "chat_header": "💬 Live AI Chat with Dr. Gong Yoo & Dr. Lee Sung-kyung (Free AI LLM + Audio Voiceover!)",
         "choose_doc": "Choose which doctor to talk to:",
         "opt_both": "👨‍⚕️👩‍⚕️ Both Doctors (Gong Yoo & Lee Sung-kyung)",
         "opt_male": "👨‍⚕️ Dr. Gong Yoo Only",
@@ -476,13 +669,13 @@ DOC_TEXT = {
         "section_title": "🩺 与孔刘医生 (Dr. Gong Yoo) & 李圣经医生 (Dr. Lee Sung-kyung) 互动会诊",
         "m_name": "👨‍⚕️ 孔刘医生 Dr. Gong Yoo（内分泌与 AI 专家）",
         "f_name": "👩‍⚕️ 李圣经医生 Dr. Lee Sung-kyung（营养与生活方式专家）",
-        "m_idle": "您好！我是<b>孔刘医生</b>。请填写上方 7 个问题并点击<b>立即分析</b>，或在下方与我们的免费 AI 大模型直接对话！",
+        "m_idle": "您好！我是<b>孔刘医生</b>。请填写上方 7 个问题并点击<b>立即分析</b>，或点击下方 🔊 按钮收听语音播报与医疗音效！",
         "f_idle": "嗨！我是<b>李圣经医生</b>。无论是医疗指标还是日常脑洞问题，都可以在下方问我们哦！",
         "m_flag": f"您的估计风险得分为 <b>{prob_gb:.1%}</b>，高于阈值 <b>{active_th:.2f}</b>（主要因素：<b>{top_feat_label}</b>）。建议咨询医生做 <b>FPG</b> 或 <b>HbA1c</b> 检测。",
         "m_safe": f"好消息！您的风险得分为 <b>{prob_gb:.1%}</b>，低于阈值 <b>{active_th:.2f}</b>。目前无需紧急检测。",
         "f_flag": f"您的 BMI 为 <b>{bmi_val:.1f} kg/m²</b>。若将 BMI 降至 <b>{lower_bmi:.1f} kg/m²</b>，风险将降至 <b>{prob_whatif:.1%}</b>！",
         "f_safe": f"您的 BMI 为 <b>{bmi_val:.1f} kg/m²</b>。请继续保持均衡饮食与适度运动！",
-        "chat_header": "💬 与孔刘医生和李圣经医生 AI 实时对话（已接入免费 AI 大模型！）",
+        "chat_header": "💬 与孔刘医生和李圣经医生 AI 实时对话（免费 AI 大模型 + 语音音效！）",
         "choose_doc": "选择咨询对象：",
         "opt_both": "👨‍⚕️👩‍⚕️ 两位医生联合解答",
         "opt_male": "👨‍⚕️ 仅问孔刘医生",
@@ -501,13 +694,13 @@ DOC_TEXT = {
         "section_title": "🩺 Consultation Interactive avec Dr Gong Yoo & Dr Lee Sung-kyung",
         "m_name": "👨‍⚕️ Dr Gong Yoo (Endocrinologie & IA)",
         "f_name": "👩‍⚕️ Dr Lee Sung-kyung (Nutrition & Mode de vie)",
-        "m_idle": "Bonjour ! Je suis le <b>Dr Gong Yoo</b>. Remplissez les 7 questions et cliquez sur <b>Analyser</b>, ou discutez avec notre IA en direct !",
+        "m_idle": "Bonjour ! Je suis le <b>Dr Gong Yoo</b>. Remplissez les 7 questions et cliquez sur <b>Analyser</b>, ou utilisez les boutons audio 🔊 ci-dessous !",
         "f_idle": "Salut ! Je suis le <b>Dr Lee Sung-kyung</b>. Posez-nous toutes vos questions ci-dessous !",
         "m_flag": f"Votre score est de <b>{prob_gb:.1%}</b> (au-dessus du seuil <b>{active_th:.2f}</b> ; facteur clé : <b>{top_feat_label}</b>). Demandez un test <b>FPG</b> ou <b>HbA1c</b> à votre médecin.",
         "m_safe": f"Bonne nouvelle ! Votre score est de <b>{prob_gb:.1%}</b> (sous le seuil <b>{active_th:.2f}</b>). Aucun test urgent requis.",
         "f_flag": f"Votre IMC est de <b>{bmi_val:.1f} kg/m²</b>. En le réduisant vers <b>{lower_bmi:.1f} kg/m²</b>, votre score baisserait à <b>{prob_whatif:.1%}</b> !",
         "f_safe": f"Votre IMC est de <b>{bmi_val:.1f} kg/m²</b>. Continuez vos bonnes habitudes !",
-        "chat_header": "💬 Chat IA en Direct avec Dr Gong Yoo & Dr Lee Sung-kyung (IA LLM Gratuite Intégrée !)",
+        "chat_header": "💬 Chat IA en Direct avec Dr Gong Yoo & Dr Lee Sung-kyung (IA LLM + Voix & Sons !)",
         "choose_doc": "Choisissez votre médecin :",
         "opt_both": "👨‍⚕️👩‍⚕️ Les 2 médecins ensemble",
         "opt_male": "👨‍⚕️ Dr Gong Yoo uniquement",
@@ -529,7 +722,7 @@ m_speech = d_cfg["m_idle"] if not has_run else (d_cfg["m_flag"] if is_flagged el
 f_speech = d_cfg["f_idle"] if not has_run else (d_cfg["f_flag"] if is_flagged else d_cfg["f_safe"])
 
 st.markdown(
-    f"<h3 style='color:#1e293b; margin-top:18px; margin-bottom:10px; font-weight:800;'>{d_cfg['section_title']}</h3>",
+    f"<h3 style='color:#1e293b; margin-top:16px; margin-bottom:10px; font-weight:800;'>{d_cfg['section_title']}</h3>",
     unsafe_allow_html=True,
 )
 
@@ -537,10 +730,10 @@ doc_col1, doc_col2 = st.columns(2, gap="medium")
 with doc_col1:
     st.markdown(
         "<div style='display:flex; align-items:center; gap:16px; background:#ffffff; border:1.5px solid #cbd5e1; border-left:6px solid #2563eb; "
-        "border-radius:14px; padding:16px 18px; box-shadow:0 3px 10px rgba(15,23,42,0.04); min-height:152px;'>"
-        f"<img src='data:image/jpeg;base64,{DOC_MALE_B64}' style='width:92px; height:112px; object-fit:cover; border-radius:12px; border:2px solid #2563eb; flex-shrink:0;'/>"
+        "border-radius:14px; padding:16px 18px; box-shadow:0 3px 10px rgba(15,23,42,0.04); min-height:156px;'>"
+        f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_MALE_B64}' style='width:92px; height:112px; object-fit:cover; border-radius:12px; border:2px solid #2563eb; flex-shrink:0;'/>"
         "<div>"
-        f"<div style='font-weight:800; color:#1d4ed8; font-size:0.95rem; margin-bottom:6px;'>{d_cfg['m_name']}</div>"
+        f"<div style='font-weight:800; color:#1d4ed8; font-size:0.95rem; margin-bottom:6px;'><span class='live-dot'></span>{d_cfg['m_name']}</div>"
         f"<div style='color:#1e293b; font-size:0.91rem; line-height:1.55;'>{m_speech}</div>"
         "</div>"
         "</div>",
@@ -550,29 +743,118 @@ with doc_col1:
 with doc_col2:
     st.markdown(
         "<div style='display:flex; align-items:center; gap:16px; background:#ffffff; border:1.5px solid #cbd5e1; border-left:6px solid #0d9488; "
-        "border-radius:14px; padding:16px 18px; box-shadow:0 3px 10px rgba(15,23,42,0.04); min-height:152px;'>"
-        f"<img src='data:image/jpeg;base64,{DOC_FEMALE_B64}' style='width:92px; height:112px; object-fit:cover; border-radius:12px; border:2px solid #0d9488; flex-shrink:0;'/>"
+        "border-radius:14px; padding:16px 18px; box-shadow:0 3px 10px rgba(15,23,42,0.04); min-height:156px;'>"
+        f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_FEMALE_B64}' style='width:92px; height:112px; object-fit:cover; border-radius:12px; border:2px solid #0d9488; flex-shrink:0;'/>"
         "<div>"
-        f"<div style='font-weight:800; color:#0f766e; font-size:0.95rem; margin-bottom:6px;'>{d_cfg['f_name']}</div>"
+        f"<div style='font-weight:800; color:#0f766e; font-size:0.95rem; margin-bottom:6px;'><span class='live-dot'></span>{d_cfg['f_name']}</div>"
         f"<div style='color:#1e293b; font-size:0.91rem; line-height:1.55;'>{f_speech}</div>"
         "</div>"
         "</div>",
         unsafe_allow_html=True,
     )
 
+# ==============================================================================
+# 8. INTERACTIVE AUDIO & VOICEOVER ACTION BAR (WEB AUDIO API + SPEECH SYNTHESIS)
+# ==============================================================================
+import re
+
+clean_m_voice = re.sub(r"<[^>]+>", "", m_speech)
+clean_f_voice = re.sub(r"<[^>]+>", "", f_speech)
+bcp47_map = {"vi": "vi-VN", "en": "en-US", "zh": "zh-CN", "fr": "fr-FR"}
+voice_lang = bcp47_map.get(lang_code, "vi-VN")
+
+AUDIO_BTN_LABELS = {
+    "vi": (
+        "🔊 Nghe BS. Gong Yoo nói",
+        "🔊 Nghe BS. Lee Sung-kyung nói",
+        "💓 Hiệu ứng Âm thanh Máy Đo Nhịp Tim & Quét AI",
+        "🔇 Tắt tiếng",
+        "🎵 Thanh Âm Thanh & Giọng Nói AI Tương Tác:",
+    ),
+    "en": (
+        "🔊 Hear Dr. Gong Yoo Speak",
+        "🔊 Hear Dr. Lee Sung-kyung Speak",
+        "💓 Play Hospital ECG & AI Scan Sound Effect",
+        "🔇 Stop Audio",
+        "🎵 Interactive AI Voiceover & Medical Sound Effects:",
+    ),
+    "zh": (
+        "🔊 收听孔刘医生语音",
+        "🔊 收听李圣经医生语音",
+        "💓 播放心电监护与 AI 扫描音效",
+        "🔇 停止播放",
+        "🎵 AI 语音播报与医疗互动音效：",
+    ),
+    "fr": (
+        "🔊 Écouter Dr Gong Yoo",
+        "🔊 Écouter Dr Lee Sung-kyung",
+        "💓 Effet Sonore ECG & Scan IA",
+        "🔇 Arrêter le son",
+        "🎵 Voix IA & Effets Sonores Médicaux :",
+    ),
+}
+btn_m_lbl, btn_f_lbl, btn_sfx_lbl, btn_stop_lbl, audio_bar_lbl = AUDIO_BTN_LABELS.get(lang_code, AUDIO_BTN_LABELS["en"])
+
+audio_html = f"""
+<div style="font-family:'Be Vietnam Pro',sans-serif; background:#ffffff; border:1.5px solid #cbd5e1; border-radius:12px; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+  <span style="font-size:0.86rem; font-weight:700; color:#1e293b;">{audio_bar_lbl}</span>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <button onclick="playDoctorVoice({json.dumps(clean_m_voice)}, '{voice_lang}', 0.92, 'male')" style="background:#eff6ff; color:#1d4ed8; border:1.5px solid #93c5fd; border-radius:8px; padding:6px 12px; font-weight:700; font-size:0.82rem; cursor:pointer;">{btn_m_lbl}</button>
+    <button onclick="playDoctorVoice({json.dumps(clean_f_voice)}, '{voice_lang}', 1.12, 'female')" style="background:#f0fdfa; color:#0f766e; border:1.5px solid #5eead4; border-radius:8px; padding:6px 12px; font-weight:700; font-size:0.82rem; cursor:pointer;">{btn_f_lbl}</button>
+    <button onclick="playMedicalScanSound()" style="background:#fef3c7; color:#92400e; border:1.5px solid #fcd34d; border-radius:8px; padding:6px 12px; font-weight:700; font-size:0.82rem; cursor:pointer;">{btn_sfx_lbl}</button>
+    <button onclick="stopAllAudio()" style="background:#f1f5f9; color:#475569; border:1.5px solid #cbd5e1; border-radius:8px; padding:6px 10px; font-weight:600; font-size:0.82rem; cursor:pointer;">{btn_stop_lbl}</button>
+  </div>
+</div>
+<script>
+function playBeep(freq, startOffset, duration, type='sine') {{
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return;
+  const ctx = new AudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
+  gain.gain.setValueAtTime(0.14, ctx.currentTime + startOffset);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startOffset + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(ctx.currentTime + startOffset);
+  osc.stop(ctx.currentTime + startOffset + duration);
+}}
+function playMedicalScanSound() {{
+  playBeep(880, 0.0, 0.12, 'sine');
+  playBeep(880, 0.22, 0.12, 'sine');
+  playBeep(1046.5, 0.50, 0.18, 'triangle');
+  playBeep(1318.5, 0.70, 0.35, 'triangle');
+}}
+function playDoctorVoice(text, langCode, pitchVal, role) {{
+  playBeep(role === 'male' ? 587.3 : 784.0, 0.0, 0.14, 'sine');
+  if ('speechSynthesis' in window) {{
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = langCode;
+    utter.pitch = pitchVal;
+    utter.rate = 1.02;
+    window.speechSynthesis.speak(utter);
+  }}
+}}
+function stopAllAudio() {{
+  if ('speechSynthesis' in window) {{
+    window.speechSynthesis.cancel();
+  }}
+}}
+</script>
+"""
+components.html(audio_html, height=62)
+
 if not has_run:
     st.info(t["prompt_analyze"])
 
 
 # ==============================================================================
-# 5. FREE LIVE AI LLM + SMART MEDICAL/WITTY CONVERSATIONAL ENGINE
+# 9. FREE LIVE AI LLM + SMART MEDICAL/WITTY CONVERSATIONAL ENGINE
 # ==============================================================================
 def call_free_llm_api(question_text: str) -> tuple:
-    """
-    Calls the 100% Free Pollinations OpenAI-compatible AI LLM endpoint (no API key needed!)
-    so Dr. Gong Yoo and Dr. Lee Sung-kyung can intelligently and wittily answer ANY question.
-    Returns (ans_male, ans_female) or (None, None) if offline/timeout.
-    """
     lang_names = {"vi": "Tiếng Việt", "en": "English", "zh": "Simplified Chinese", "fr": "French"}
     target_lang = lang_names.get(lang_code, "Vietnamese")
     system_prompt = (
@@ -617,7 +899,6 @@ def call_free_llm_api(question_text: str) -> tuple:
 def generate_doctor_replies(question_text: str, use_live_llm: bool = True) -> tuple:
     q = question_text.lower().strip()
 
-    # Built-in instant expert answers for the 6 preset questions & common topics
     if lang_code == "vi":
         if any(w in q for w in ["recall", "precision", "tối ưu", "f2", "pr-auc", "chỉ số nào"]):
             ans_m = (
@@ -682,13 +963,11 @@ def generate_doctor_replies(question_text: str, use_live_llm: bool = True) -> tu
             )
             return ans_m, ans_f
 
-    # For any free-form or custom question, call the Free Live AI LLM first!
     if use_live_llm:
         llm_m, llm_f = call_free_llm_api(question_text)
         if llm_m and llm_f:
             return llm_m, llm_f
 
-    # Smart instant fallback if offline
     if lang_code == "vi":
         advice_tail = (
             f"Vì điểm của bạn ({prob_gb:.1%}) đang trên ngưỡng {active_th:.2f} nên nhớ đi xét nghiệm máu kiểm tra nhé!"
@@ -772,7 +1051,7 @@ with st.container(border=True):
         st.markdown(
             "<div style='display:flex; align-items:flex-start; gap:14px; background:#f8fafc; border:1px solid #cbd5e1; border-left:5px solid #2563eb; "
             "padding:14px 16px; border-radius:12px; margin-bottom:10px;'>"
-            f"<img src='data:image/jpeg;base64,{DOC_MALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #2563eb; flex-shrink:0;'/>"
+            f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_MALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #2563eb; flex-shrink:0;'/>"
             f"<div style='color:#1e293b; font-size:0.93rem; line-height:1.55;'><b style='color:#1d4ed8;'>{d_cfg['m_name']}:</b> {reply_m}</div>"
             "</div>",
             unsafe_allow_html=True,
@@ -781,14 +1060,37 @@ with st.container(border=True):
         st.markdown(
             "<div style='display:flex; align-items:flex-start; gap:14px; background:#f8fafc; border:1px solid #cbd5e1; border-left:5px solid #0d9488; "
             "padding:14px 16px; border-radius:12px; margin-bottom:4px;'>"
-            f"<img src='data:image/jpeg;base64,{DOC_FEMALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #0d9488; flex-shrink:0;'/>"
+            f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_FEMALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #0d9488; flex-shrink:0;'/>"
             f"<div style='color:#1e293b; font-size:0.93rem; line-height:1.55;'><b style='color:#0f766e;'>{d_cfg['f_name']}:</b> {reply_f}</div>"
             "</div>",
             unsafe_allow_html=True,
         )
 
+    # Audio playback button specifically for the Chat Reply!
+    clean_chat_m = re.sub(r"<[^>]+>", "", reply_m)
+    clean_chat_f = re.sub(r"<[^>]+>", "", reply_f)
+    chat_audio_html = f"""
+    <div style="font-family:'Be Vietnam Pro',sans-serif; display:flex; gap:8px; margin-top:4px;">
+      <button onclick="playChatVoice({json.dumps(clean_chat_m)}, '{voice_lang}', 0.92)" style="background:#eff6ff; color:#1d4ed8; border:1px solid #93c5fd; border-radius:6px; padding:4px 10px; font-weight:600; font-size:0.78rem; cursor:pointer;">🔊 {btn_m_lbl} (Chat)</button>
+      <button onclick="playChatVoice({json.dumps(clean_chat_f)}, '{voice_lang}', 1.12)" style="background:#f0fdfa; color:#0f766e; border:1px solid #5eead4; border-radius:6px; padding:4px 10px; font-weight:600; font-size:0.78rem; cursor:pointer;">🔊 {btn_f_lbl} (Chat)</button>
+    </div>
+    <script>
+    function playChatVoice(txt, lc, p) {{
+      if ('speechSynthesis' in window) {{
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(txt);
+        u.lang = lc;
+        u.pitch = p;
+        u.rate = 1.03;
+        window.speechSynthesis.speak(u);
+      }}
+    }}
+    </script>
+    """
+    components.html(chat_audio_html, height=40)
+
 # ==============================================================================
-# 6. DETAILED RESULTS, RISK SPECTRUM & TOP FACTORS
+# 10. DETAILED RESULTS, RISK SPECTRUM & TOP FACTORS
 # ==============================================================================
 if has_run:
     if is_flagged:

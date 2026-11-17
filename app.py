@@ -630,26 +630,64 @@ def build_medical_ecg_wav() -> bytes:
     return buf.getvalue()
 
 
+def prepare_expressive_text(text_clean: str, lang_key: str, gender: str) -> str:
+    """Formats medical symbols & adds natural conversational pauses for expressive TTS."""
+    txt = text_clean.strip()
+    if lang_key == "vi":
+        txt = txt.replace("kg/m²", "ki-lô-gam trên mét vuông")
+        txt = txt.replace("HbA1c", "Hát bê A một xê")
+        txt = txt.replace("FPG", "đường huyết lúc đói Ép Pê Gê")
+        txt = txt.replace("PR-AUC", "Pê Rờ A U Cê")
+        txt = txt.replace("F2-Score", "điểm Ép hai")
+        txt = txt.replace("τ*", "ngưỡng cắt")
+        txt = txt.replace("τ", "ngưỡng cắt")
+        txt = txt.replace("—", "... ")
+        txt = txt.replace("(", ", ").replace(")", ", ")
+        txt = txt.replace(":", "... ")
+        if gender == "male":
+            txt = "Chào bạn... " + txt if not txt.startswith(("Chào", "Haha", "À", "Tin")) else txt
+        else:
+            txt = "Bạn ơi... " + txt if not txt.startswith(("Xin", "Haha", "Cảm", "Đừng")) else txt
+    elif lang_key == "en":
+        txt = txt.replace("kg/m²", "kilograms per square meter")
+        txt = txt.replace("τ*", "threshold").replace("τ", "threshold")
+        txt = txt.replace("—", "... ")
+    elif lang_key == "zh":
+        txt = txt.replace("kg/m²", "千克每平方米")
+    elif lang_key == "fr":
+        txt = txt.replace("kg/m²", "kilogrammes par mètre carré")
+    # Collapse excess spaces
+    return re.sub(r"\s+", " ", txt).strip()
+
+
 @st.cache_data(show_spinner=False)
 def synthesize_voice_mp3(text_clean: str, lang_key: str, gender: str = "female"):
-    """Generates distinct Male and Female neural voiceovers via edge-tts (with gTTS fallback)."""
+    """Generates expressive Male and Female neural voiceovers with natural pitch, rate & pauses."""
     voice_map = {
-        ("vi", "male"): "vi-VN-NamMinhNeural",
-        ("vi", "female"): "vi-VN-HoaiMyNeural",
-        ("en", "male"): "en-US-GuyNeural",
-        ("en", "female"): "en-US-JennyNeural",
-        ("zh", "male"): "zh-CN-YunxiNeural",
-        ("zh", "female"): "zh-CN-XiaoxiaoNeural",
-        ("fr", "male"): "fr-FR-HenriNeural",
-        ("fr", "female"): "fr-FR-DeniseNeural",
+        ("vi", "male"): ("vi-VN-NamMinhNeural", "+3%", "-4Hz"),
+        ("vi", "female"): ("vi-VN-HoaiMyNeural", "+5%", "+6Hz"),
+        ("en", "male"): ("en-US-GuyNeural", "+2%", "-3Hz"),
+        ("en", "female"): ("en-US-JennyNeural", "+4%", "+5Hz"),
+        ("zh", "male"): ("zh-CN-YunxiNeural", "+3%", "-3Hz"),
+        ("zh", "female"): ("zh-CN-XiaoxiaoNeural", "+5%", "+5Hz"),
+        ("fr", "male"): ("fr-FR-HenriNeural", "+2%", "-3Hz"),
+        ("fr", "female"): ("fr-FR-DeniseNeural", "+4%", "+5Hz"),
     }
-    chosen_voice = voice_map.get((lang_key, gender), "vi-VN-HoaiMyNeural")
+    chosen_voice, chosen_rate, chosen_pitch = voice_map.get(
+        (lang_key, gender), ("vi-VN-HoaiMyNeural", "+5%", "+6Hz")
+    )
+    spoken_text = prepare_expressive_text(text_clean, lang_key, gender)
 
     try:
         import edge_tts
 
         async def _run_tts() -> bytes:
-            communicate = edge_tts.Communicate(text_clean, chosen_voice)
+            communicate = edge_tts.Communicate(
+                spoken_text,
+                chosen_voice,
+                rate=chosen_rate,
+                pitch=chosen_pitch,
+            )
             chunks = bytearray()
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
@@ -672,7 +710,7 @@ def synthesize_voice_mp3(text_clean: str, lang_key: str, gender: str = "female")
     tl = tts_lang_map.get(lang_key, "vi")
     try:
         from gtts import gTTS
-        tts = gTTS(text=text_clean, lang=tl, slow=False)
+        tts = gTTS(text=spoken_text, lang=tl, slow=False)
         mp3_fp = io.BytesIO()
         tts.write_to_fp(mp3_fp)
         return mp3_fp.getvalue(), "audio/mp3"

@@ -38,7 +38,8 @@
     "recall": 0.705,
     "precision": 0.336,
     "fpr": 0.225,
-    "f1": 0.456
+    "f1": 0.456,
+    "accuracy": 0.765
   },
   "baseline_model_test_metrics": {
     "model": "Logistic Regression (minimal)",
@@ -121,7 +122,8 @@
         "fn": 2,
         "fp": 637,
         "tn": 224
-      }
+      },
+      "test_accuracy": 0.361
     },
     {
       "threshold": 0.04,
@@ -136,7 +138,8 @@
         "fn": 5,
         "fp": 528,
         "tn": 333
-      }
+      },
+      "test_accuracy": 0.467
     },
     {
       "threshold": 0.06,
@@ -151,7 +154,8 @@
         "fn": 10,
         "fp": 437,
         "tn": 423
-      }
+      },
+      "test_accuracy": 0.552
     },
     {
       "threshold": 0.08,
@@ -166,7 +170,8 @@
         "fn": 14,
         "fp": 377,
         "tn": 484
-      }
+      },
+      "test_accuracy": 0.609
     },
     {
       "threshold": 0.1,
@@ -181,7 +186,8 @@
         "fn": 19,
         "fp": 335,
         "tn": 526
-      }
+      },
+      "test_accuracy": 0.647
     },
     {
       "threshold": 0.12,
@@ -196,7 +202,8 @@
         "fn": 25,
         "fp": 290,
         "tn": 571
-      }
+      },
+      "test_accuracy": 0.686
     },
     {
       "threshold": 0.14,
@@ -211,7 +218,8 @@
         "fn": 30,
         "fp": 251,
         "tn": 609
-      }
+      },
+      "test_accuracy": 0.718
     },
     {
       "threshold": 0.16,
@@ -226,7 +234,8 @@
         "fn": 36,
         "fp": 220,
         "tn": 640
-      }
+      },
+      "test_accuracy": 0.744
     },
     {
       "threshold": 0.18,
@@ -241,7 +250,8 @@
         "fn": 41,
         "fp": 194,
         "tn": 667
-      }
+      },
+      "test_accuracy": 0.765
     },
     {
       "threshold": 0.2,
@@ -256,7 +266,8 @@
         "fn": 47,
         "fp": 171,
         "tn": 689
-      }
+      },
+      "test_accuracy": 0.782
     },
     {
       "threshold": 0.22,
@@ -271,7 +282,8 @@
         "fn": 52,
         "fp": 152,
         "tn": 708
-      }
+      },
+      "test_accuracy": 0.796
     },
     {
       "threshold": 0.24,
@@ -286,7 +298,8 @@
         "fn": 58,
         "fp": 132,
         "tn": 728
-      }
+      },
+      "test_accuracy": 0.81
     },
     {
       "threshold": 0.26,
@@ -301,7 +314,8 @@
         "fn": 63,
         "fp": 115,
         "tn": 745
-      }
+      },
+      "test_accuracy": 0.821
     },
     {
       "threshold": 0.28,
@@ -316,7 +330,8 @@
         "fn": 68,
         "fp": 102,
         "tn": 759
-      }
+      },
+      "test_accuracy": 0.83
     },
     {
       "threshold": 0.3,
@@ -331,7 +346,8 @@
         "fn": 73,
         "fp": 90,
         "tn": 771
-      }
+      },
+      "test_accuracy": 0.837
     },
     {
       "threshold": 0.32,
@@ -346,7 +362,8 @@
         "fn": 78,
         "fp": 77,
         "tn": 783
-      }
+      },
+      "test_accuracy": 0.844
     },
     {
       "threshold": 0.34,
@@ -361,7 +378,8 @@
         "fn": 85,
         "fp": 65,
         "tn": 795
-      }
+      },
+      "test_accuracy": 0.85
     },
     {
       "threshold": 0.36,
@@ -376,7 +394,8 @@
         "fn": 90,
         "fp": 55,
         "tn": 806
-      }
+      },
+      "test_accuracy": 0.855
     },
     {
       "threshold": 0.38,
@@ -391,7 +410,8 @@
         "fn": 94,
         "fp": 47,
         "tn": 813
-      }
+      },
+      "test_accuracy": 0.858
     },
     {
       "threshold": 0.4,
@@ -406,7 +426,8 @@
         "fn": 99,
         "fp": 40,
         "tn": 820
-      }
+      },
+      "test_accuracy": 0.861
     },
     {
       "threshold": 0.42,
@@ -421,7 +442,8 @@
         "fn": 102,
         "fp": 35,
         "tn": 826
-      }
+      },
+      "test_accuracy": 0.863
     },
     {
       "threshold": 0.44,
@@ -436,7 +458,8 @@
         "fn": 108,
         "fp": 28,
         "tn": 833
-      }
+      },
+      "test_accuracy": 0.864
     },
     {
       "threshold": 0.46,
@@ -451,7 +474,8 @@
         "fn": 113,
         "fp": 21,
         "tn": 840
-      }
+      },
+      "test_accuracy": 0.866
     },
     {
       "threshold": 0.48,
@@ -466,7 +490,8 @@
         "fn": 117,
         "fp": 18,
         "tn": 843
-      }
+      },
+      "test_accuracy": 0.865
     },
     {
       "threshold": 0.5,
@@ -481,7 +506,8 @@
         "fn": 121,
         "fp": 14,
         "tn": 847
-      }
+      },
+      "test_accuracy": 0.865
     },
     {
       "threshold": 0.52,
@@ -496,7 +522,8 @@
         "fn": 123,
         "fp": 11,
         "tn": 850
-      }
+      },
+      "test_accuracy": 0.866
     },
     {
       "threshold": 0.54,
@@ -511,7 +538,8 @@
         "fn": 126,
         "fp": 10,
         "tn": 851
-      }
+      },
+      "test_accuracy": 0.865
     },
     {
       "threshold": 0.56,
@@ -526,7 +554,8 @@
         "fn": 127,
         "fp": 8,
         "tn": 853
-      }
+      },
+      "test_accuracy": 0.865
     },
     {
       "threshold": 0.58,
@@ -541,7 +570,8 @@
         "fn": 130,
         "fp": 6,
         "tn": 855
-      }
+      },
+      "test_accuracy": 0.864
     },
     {
       "threshold": 0.6,
@@ -556,7 +586,8 @@
         "fn": 132,
         "fp": 4,
         "tn": 856
-      }
+      },
+      "test_accuracy": 0.863
     },
     {
       "threshold": 0.62,
@@ -571,7 +602,8 @@
         "fn": 134,
         "fp": 3,
         "tn": 858
-      }
+      },
+      "test_accuracy": 0.863
     },
     {
       "threshold": 0.64,
@@ -586,7 +618,8 @@
         "fn": 135,
         "fp": 2,
         "tn": 859
-      }
+      },
+      "test_accuracy": 0.863
     },
     {
       "threshold": 0.66,
@@ -601,7 +634,8 @@
         "fn": 136,
         "fp": 1,
         "tn": 859
-      }
+      },
+      "test_accuracy": 0.862
     },
     {
       "threshold": 0.68,
@@ -616,7 +650,8 @@
         "fn": 137,
         "fp": 1,
         "tn": 860
-      }
+      },
+      "test_accuracy": 0.862
     },
     {
       "threshold": 0.7,
@@ -631,7 +666,8 @@
         "fn": 138,
         "fp": 1,
         "tn": 860
-      }
+      },
+      "test_accuracy": 0.861
     },
     {
       "threshold": 0.72,
@@ -646,7 +682,8 @@
         "fn": 139,
         "fp": 0,
         "tn": 860
-      }
+      },
+      "test_accuracy": 0.86
     },
     {
       "threshold": 0.74,
@@ -661,7 +698,8 @@
         "fn": 139,
         "fp": 0,
         "tn": 861
-      }
+      },
+      "test_accuracy": 0.861
     },
     {
       "threshold": 0.76,
@@ -676,7 +714,8 @@
         "fn": 139,
         "fp": 0,
         "tn": 861
-      }
+      },
+      "test_accuracy": 0.861
     },
     {
       "threshold": 0.78,
@@ -691,7 +730,8 @@
         "fn": 139,
         "fp": 0,
         "tn": 861
-      }
+      },
+      "test_accuracy": 0.861
     },
     {
       "threshold": 0.8,
@@ -706,7 +746,8 @@
         "fn": 139,
         "fp": 0,
         "tn": 861
-      }
+      },
+      "test_accuracy": 0.861
     }
   ],
   "permutation_importance": [

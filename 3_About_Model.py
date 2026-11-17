@@ -108,14 +108,18 @@ st.markdown(
 
 # Performance of the app model (test set)
 st.subheader(t["ab_perf_title"])
-p1, p2, p3, p4, p5 = st.columns(5)
+acc_app = float(app_m.get("accuracy", 0.765))
+p1, p2, p3, p4, p5, p6 = st.columns(6)
 p1.metric("PR-AUC", f"{app_m['pr_auc_test']:.3f}")
 p2.metric("ROC-AUC", f"{app_m['roc_auc_test']:.3f}")
 p3.metric("Recall", f"{app_m['recall']:.1%}")
 p4.metric("Precision", f"{app_m['precision']:.1%}")
-p5.metric("False-positive rate", f"{app_m['fpr']:.1%}")
+p5.metric("Accuracy", f"{acc_app:.1%}")
+p6.metric("False-positive rate", f"{app_m['fpr']:.1%}")
 st.caption(
-    f"At threshold {th_default:.2f}. With an imbalanced label (~14% positive), PR-AUC and Recall/FPR are far more informative than raw accuracy."
+    f"Tại ngưỡng tối ưu {th_default:.2f}, Accuracy đạt {acc_app:.1%} (nếu tăng ngưỡng lên 0.22–0.24 thì Accuracy đạt ~80%–81%, nhưng sẽ bỏ sót nhiều ca bệnh hơn). Với dữ liệu mất cân bằng (~14% dương tính), Recall và PR-AUC quan trọng hơn Accuracy thuần túy."
+    if lang_code == "vi"
+    else f"At threshold {th_default:.2f}, Accuracy is {acc_app:.1%} (raising threshold to 0.22–0.24 brings Accuracy to ~80%–81%, at the cost of missing more cases). With an imbalanced ~14% positive label, Recall and PR-AUC are far more informative than raw Accuracy."
 )
 
 st.subheader(t["ab_thresh_title"])

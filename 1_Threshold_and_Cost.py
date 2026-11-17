@@ -79,11 +79,13 @@ current_pt = min(curve_list, key=lambda r: abs(r["threshold"] - chosen_th))
 p1000 = current_pt["per_1000"]
 
 with col_right:
-    m1, m2, m3, m4 = st.columns(4)
+    acc_now = float(current_pt.get("test_accuracy", (p1000["tp"] + p1000["tn"]) / 1000.0))
+    m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric(t["tc_kpi_recall"], f"{current_pt['test_recall']:.1%}")
     m2.metric(t["tc_kpi_precision"], f"{current_pt['test_precision']:.1%}")
-    m3.metric(t["tc_kpi_fpr"], f"{current_pt['test_fpr']:.1%}")
-    m4.metric(t["tc_kpi_flagged"], f"{current_pt['test_flagged']:.1%}")
+    m3.metric("Accuracy", f"{acc_now:.1%}")
+    m4.metric(t["tc_kpi_fpr"], f"{current_pt['test_fpr']:.1%}")
+    m5.metric(t["tc_kpi_flagged"], f"{current_pt['test_flagged']:.1%}")
 
     st.markdown(f"**{t['tc_per1000_title']}**")
     table_1000_html = (

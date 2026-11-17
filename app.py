@@ -24,6 +24,39 @@ st.set_page_config(
 )
 
 inject_friendly_css()
+
+# If the user uploaded all files flat into the root folder on GitHub (without a 'pages/' subfolder),
+# provide a clean sidebar navigation menu so all 5 pages work seamlessly in flat mode too!
+_base_dir = Path(__file__).resolve().parent
+if not (_base_dir / "pages").exists() and (_base_dir / "1_Threshold_and_Cost.py").exists():
+    _flat_page = st.sidebar.radio(
+        "Navigation",
+        options=[
+            "app",
+            "Threshold and Cost",
+            "Health Equity",
+            "About Model",
+            "Batch Screening",
+        ],
+        label_visibility="collapsed",
+    )
+    if _flat_page != "app":
+        _file_map = {
+            "Threshold and Cost": "1_Threshold_and_Cost.py",
+            "Health Equity": "2_Health_Equity.py",
+            "About Model": "3_About_Model.py",
+            "Batch Screening": "4_Batch_Screening.py",
+        }
+        _target = _base_dir / _file_map[_flat_page]
+        _code = _target.read_text(encoding="utf-8")
+        _orig_spc = st.set_page_config
+        st.set_page_config = lambda *args, **kwargs: None
+        try:
+            exec(_code, globals())
+        finally:
+            st.set_page_config = _orig_spc
+        st.stop()
+
 lang_code, t = render_sidebar_and_get_lang()
 main_pipe, base_pipe, meta = load_artifacts()
 

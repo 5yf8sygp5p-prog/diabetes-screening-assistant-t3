@@ -600,10 +600,22 @@ def render_sidebar_and_get_lang() -> tuple:
 @st.cache_resource
 def load_artifacts():
     base_dir = Path(__file__).resolve().parent
-    meta_path = base_dir / "models" / "model_meta.json"
-    inydb_path = base_dir / "models" / "inydb"
-    pipeline_path = base_dir / "models" / "pipeline.joblib"
-    baseline_path = base_dir / "models" / "baseline_logreg.joblib"
+
+    def find_file(subpath: str, filename: str) -> Path:
+        for candidate in [
+            base_dir / subpath / filename,
+            base_dir / filename,
+            base_dir.parent / subpath / filename,
+            base_dir.parent / filename,
+        ]:
+            if candidate.exists():
+                return candidate
+        return base_dir / subpath / filename
+
+    meta_path = find_file("models", "model_meta.json")
+    inydb_path = find_file("models", "inydb")
+    pipeline_path = find_file("models", "pipeline.joblib")
+    baseline_path = find_file("models", "baseline_logreg.joblib")
 
     with open(meta_path, "r", encoding="utf-8") as f:
         meta = json.load(f)

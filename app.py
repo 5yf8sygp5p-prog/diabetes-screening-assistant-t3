@@ -10,6 +10,7 @@ Features:
 4. Free Live AI LLM Chat with Dr. Gong Yoo & Dr. Lee Sung-kyung.
 """
 
+import asyncio
 import io
 import json
 import math
@@ -630,13 +631,48 @@ def build_medical_ecg_wav() -> bytes:
 
 
 @st.cache_data(show_spinner=False)
-def synthesize_voice_mp3(text_clean: str, lang_key: str, slow_mode: bool = False):
-    """Generates real spoken MP3 voiceover via gTTS (works in all browsers via st.audio)."""
+def synthesize_voice_mp3(text_clean: str, lang_key: str, gender: str = "female"):
+    """Generates distinct Male and Female neural voiceovers via edge-tts (with gTTS fallback)."""
+    voice_map = {
+        ("vi", "male"): "vi-VN-NamMinhNeural",
+        ("vi", "female"): "vi-VN-HoaiMyNeural",
+        ("en", "male"): "en-US-GuyNeural",
+        ("en", "female"): "en-US-JennyNeural",
+        ("zh", "male"): "zh-CN-YunxiNeural",
+        ("zh", "female"): "zh-CN-XiaoxiaoNeural",
+        ("fr", "male"): "fr-FR-HenriNeural",
+        ("fr", "female"): "fr-FR-DeniseNeural",
+    }
+    chosen_voice = voice_map.get((lang_key, gender), "vi-VN-HoaiMyNeural")
+
+    try:
+        import edge_tts
+
+        async def _run_tts() -> bytes:
+            communicate = edge_tts.Communicate(text_clean, chosen_voice)
+            chunks = bytearray()
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    chunks.extend(chunk["data"])
+            return bytes(chunks)
+
+        try:
+            loop = asyncio.new_event_loop()
+            audio_bytes = loop.run_until_complete(_run_tts())
+            loop.close()
+        except Exception:
+            audio_bytes = asyncio.run(_run_tts())
+
+        if audio_bytes:
+            return audio_bytes, "audio/mp3"
+    except Exception:
+        pass
+
     tts_lang_map = {"vi": "vi", "en": "en", "zh": "zh-CN", "fr": "fr"}
     tl = tts_lang_map.get(lang_key, "vi")
     try:
         from gtts import gTTS
-        tts = gTTS(text=text_clean, lang=tl, slow=slow_mode)
+        tts = gTTS(text=text_clean, lang=tl, slow=False)
         mp3_fp = io.BytesIO()
         tts.write_to_fp(mp3_fp)
         return mp3_fp.getvalue(), "audio/mp3"
@@ -679,11 +715,11 @@ st.caption(audio_bar_lbl)
 au_c1, au_c2, au_c3 = st.columns(3)
 if au_c1.button(btn_m_lbl, key="btn_voice_m_top", use_container_width=True):
     st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
-        clean_m_voice, lang_code, slow_mode=False
+        clean_m_voice, lang_code, gender="male"
     )
 if au_c2.button(btn_f_lbl, key="btn_voice_f_top", use_container_width=True):
     st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
-        clean_f_voice, lang_code, slow_mode=False
+        clean_f_voice, lang_code, gender="female"
     )
 if au_c3.button(btn_sfx_lbl, key="btn_sfx_top", use_container_width=True):
     st.session_state["active_audio_bytes"] = build_medical_ecg_wav()
@@ -921,11 +957,11 @@ with st.container(border=True):
     ca1, ca2 = st.columns(2)
     if ca1.button(f"{btn_m_lbl} (Chat)", key="btn_chat_voice_m", use_container_width=True):
         st.session_state["chat_audio_bytes"], st.session_state["chat_audio_fmt"] = synthesize_voice_mp3(
-            clean_chat_m, lang_code
+            clean_chat_m, lang_code, gender="male"
         )
     if ca2.button(f"{btn_f_lbl} (Chat)", key="btn_chat_voice_f", use_container_width=True):
         st.session_state["chat_audio_bytes"], st.session_state["chat_audio_fmt"] = synthesize_voice_mp3(
-            clean_chat_f, lang_code
+            clean_chat_f, lang_code, gender="female"
         )
     if st.session_state.get("chat_audio_bytes"):
         st.audio(

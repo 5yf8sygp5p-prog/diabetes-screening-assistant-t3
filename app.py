@@ -553,38 +553,23 @@ def prepare_expressive_text(text_clean: str, lang_key: str, gender: str) -> str:
 
 
 @st.cache_data(show_spinner=False)
-def synthesize_voice_mp3(text_clean: str, lang_key: str, gender: str = "female", voice_style: str = "warm"):
+def synthesize_voice_mp3(text_clean: str, lang_key: str, gender: str = "female"):
     """
-    Generates warm, expressive Male and Female neural voiceovers via edge-tts.
-    Supports:
-    - 'warm': Multilingual Neural Voices (Ava/Andrew) — soft, empathetic, natural human cadence
-    - 'native': Native Country Neural Voices (HoaiMy/NamMinh, Jenny/Guy, Xiaoyi/Yunjian, Vivienne/Remy) at gentle -6% pace
+    Generates ONE calm, steady, warm, authoritative doctor voice per gender & language via edge-tts.
     """
-    if voice_style == "warm":
-        voice_map = {
-            ("vi", "male"): ("en-US-AndrewMultilingualNeural", "-5%", "-2Hz"),
-            ("vi", "female"): ("en-US-AvaMultilingualNeural", "-4%", "+3Hz"),
-            ("en", "male"): ("en-US-AndrewMultilingualNeural", "-4%", "-2Hz"),
-            ("en", "female"): ("en-US-AvaMultilingualNeural", "-3%", "+3Hz"),
-            ("zh", "male"): ("zh-CN-YunjianNeural", "-5%", "-2Hz"),
-            ("zh", "female"): ("zh-CN-XiaoyiNeural", "-4%", "+4Hz"),
-            ("fr", "male"): ("fr-FR-RemyMultilingualNeural", "-4%", "-2Hz"),
-            ("fr", "female"): ("fr-FR-VivienneMultilingualNeural", "-3%", "+3Hz"),
-        }
-    else:
-        voice_map = {
-            ("vi", "male"): ("vi-VN-NamMinhNeural", "-6%", "-3Hz"),
-            ("vi", "female"): ("vi-VN-HoaiMyNeural", "-5%", "+4Hz"),
-            ("en", "male"): ("en-US-BrianMultilingualNeural", "-4%", "-2Hz"),
-            ("en", "female"): ("en-US-EmmaMultilingualNeural", "-3%", "+3Hz"),
-            ("zh", "male"): ("zh-CN-YunxiNeural", "-5%", "-2Hz"),
-            ("zh", "female"): ("zh-CN-XiaoxiaoNeural", "-4%", "+4Hz"),
-            ("fr", "male"): ("fr-FR-HenriNeural", "-5%", "-2Hz"),
-            ("fr", "female"): ("fr-FR-DeniseNeural", "-4%", "+3Hz"),
-        }
+    voice_map = {
+        ("vi", "male"): ("vi-VN-NamMinhNeural", "-8%", "-6Hz"),
+        ("vi", "female"): ("vi-VN-HoaiMyNeural", "-7%", "-2Hz"),
+        ("en", "male"): ("en-US-AndrewMultilingualNeural", "-5%", "-3Hz"),
+        ("en", "female"): ("en-US-AvaMultilingualNeural", "-4%", "+1Hz"),
+        ("zh", "male"): ("zh-CN-YunjianNeural", "-6%", "-4Hz"),
+        ("zh", "female"): ("zh-CN-XiaoyiNeural", "-5%", "+2Hz"),
+        ("fr", "male"): ("fr-FR-RemyMultilingualNeural", "-5%", "-3Hz"),
+        ("fr", "female"): ("fr-FR-VivienneMultilingualNeural", "-4%", "+1Hz"),
+    }
 
     chosen_voice, chosen_rate, chosen_pitch = voice_map.get(
-        (lang_key, gender), ("en-US-AvaMultilingualNeural", "-4%", "+3Hz")
+        (lang_key, gender), ("en-US-AvaMultilingualNeural", "-4%", "+1Hz")
     )
     spoken_text = prepare_expressive_text(text_clean, lang_key, gender)
 
@@ -659,31 +644,16 @@ AUDIO_BTN_LABELS = {
 }
 btn_m_lbl, btn_f_lbl, btn_sfx_lbl, audio_bar_lbl = AUDIO_BTN_LABELS.get(lang_code, AUDIO_BTN_LABELS["en"])
 
-VOICE_STYLE_I18N = {
-    "vi": ("🎙️ Chọn chất giọng:", "✨ Giọng Ấm Áp, Tự Nhiên (Khuyên dùng)", "🎙️ Giọng Truyền Thống (Chậm rãi, Nhấn nhá)"),
-    "en": ("🎙️ Voice style:", "✨ Warm & Expressive (Ava / Andrew)", "🎙️ Crisp Studio (Emma / Brian)"),
-    "zh": ("🎙️ 音色选择：", "✨ 温柔自然（推荐）", "🎙️ 标准播报"),
-    "fr": ("🎙️ Style de voix :", "✨ Chaleureuse & Naturelle", "🎙️ Classique"),
-}
-vs_lbl, vs_warm, vs_native = VOICE_STYLE_I18N.get(lang_code, VOICE_STYLE_I18N["en"])
-
 st.caption(audio_bar_lbl)
-voice_style_choice = st.radio(
-    vs_lbl,
-    options=["warm", "native"],
-    format_func=lambda k: vs_warm if k == "warm" else vs_native,
-    horizontal=True,
-    index=0,
-)
 
 au_c1, au_c2, au_c3 = st.columns(3)
 if au_c1.button(btn_m_lbl, key="btn_voice_m_top", use_container_width=True):
     st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
-        clean_m_voice, lang_code, gender="male", voice_style=voice_style_choice
+        clean_m_voice, lang_code, gender="male"
     )
 if au_c2.button(btn_f_lbl, key="btn_voice_f_top", use_container_width=True):
     st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
-        clean_f_voice, lang_code, gender="female", voice_style=voice_style_choice
+        clean_f_voice, lang_code, gender="female"
     )
 if au_c3.button(btn_sfx_lbl, key="btn_sfx_top", use_container_width=True):
     st.session_state["active_audio_bytes"] = build_medical_ecg_wav()
@@ -1088,11 +1058,11 @@ with st.container(border=True):
     ca1, ca2 = st.columns(2)
     if ca1.button(f"{btn_m_lbl} (Chat)", key="btn_chat_voice_m", use_container_width=True):
         st.session_state["chat_audio_bytes"], st.session_state["chat_audio_fmt"] = synthesize_voice_mp3(
-            clean_chat_m, lang_code, gender="male", voice_style=voice_style_choice
+            clean_chat_m, lang_code, gender="male"
         )
     if ca2.button(f"{btn_f_lbl} (Chat)", key="btn_chat_voice_f", use_container_width=True):
         st.session_state["chat_audio_bytes"], st.session_state["chat_audio_fmt"] = synthesize_voice_mp3(
-            clean_chat_f, lang_code, gender="female", voice_style=voice_style_choice
+            clean_chat_f, lang_code, gender="female"
         )
     if st.session_state.get("chat_audio_bytes"):
         st.audio(

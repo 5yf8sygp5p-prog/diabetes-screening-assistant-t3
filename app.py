@@ -77,7 +77,7 @@ i18n.score_single_case = score_single_case
 
 st.set_page_config(
     page_title="Diabetes Screening Assistant | EIU",
-    page_icon="🩺",
+    page_icon="🎄",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -212,19 +212,49 @@ if "active_threshold" not in st.session_state:
 # ==============================================================================
 # 1. HEADER SECTION WITH TRANSLATED EIU UNIVERSITY BANNER
 # ==============================================================================
-header_html = (
-    "<div style='display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; "
-    "background:#ffffff; border:1.5px solid #cbd5e1; border-radius:16px; padding:18px 26px; margin-bottom:14px; "
-    "box-shadow:0 4px 12px rgba(15,23,42,0.04);'>"
-    "<div style='flex:1; min-width:280px;'>"
-    f"<div style='font-size:0.78rem; font-weight:700; color:#1e3a8a; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;'>"
-    f"{_header_badge_txt}"
-    "</div>"
-    f"<h1 style='font-size:2.05rem; font-weight:800; color:#0f172a; margin:0;'>{t['app_title']}</h1>"
-    "</div>"
-    f"<div style='text-align:right;'><img src='data:image/png;base64,{EIU_LOGO_B64}' style='max-height:62px; width:auto;'/></div>"
-    "</div>"
-)
+if st.session_state.get("xmas_theme", True):
+    _xmas_i18n = getattr(i18n, "XMAS_I18N", {})
+    _, _, _xmas_banner_msg = _xmas_i18n.get(
+        lang_code,
+        ("", "", "✨ Merry Christmas • Wishing you a warm & healthy holiday season! 🎁"),
+    )
+    header_html = (
+        "<div style='background:linear-gradient(135deg, #ffffff 0%, #fff1f2 55%, #ecfdf5 100%); "
+        "border:1.5px solid #fecdd3; border-radius:18px; padding:16px 26px 18px 26px; margin-bottom:14px; "
+        "box-shadow:0 6px 18px rgba(220,38,38,0.08);'>"
+        "<div class='xmas-candy-strip'></div>"
+        "<div style='display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;'>"
+        "<div style='flex:1; min-width:280px;'>"
+        "<div style='display:inline-block; background:#fef2f2; border:1px solid #fca5a5; color:#b91c1c; "
+        "font-size:0.76rem; font-weight:700; padding:3px 11px; border-radius:999px; margin-bottom:7px;'>"
+        f"{_xmas_banner_msg}"
+        "</div>"
+        f"<div style='font-size:0.78rem; font-weight:700; color:#15803d; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;'>"
+        f"🎄 {_header_badge_txt}"
+        "</div>"
+        f"<h1 style='font-size:2.05rem; font-weight:800; color:#991b1b; margin:0;'>🎅 {t['app_title']} ❄️</h1>"
+        "</div>"
+        "<div style='text-align:right;'>"
+        f"<img src='data:image/png;base64,{EIU_LOGO_B64}' style='max-height:60px; width:auto;'/>"
+        "<div style='font-size:1.15rem; margin-top:4px; letter-spacing:4px;'>🎄⛄🎁✨</div>"
+        "</div>"
+        "</div>"
+        "</div>"
+    )
+else:
+    header_html = (
+        "<div style='display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; "
+        "background:#ffffff; border:1.5px solid #cbd5e1; border-radius:16px; padding:18px 26px; margin-bottom:14px; "
+        "box-shadow:0 4px 12px rgba(15,23,42,0.04);'>"
+        "<div style='flex:1; min-width:280px;'>"
+        f"<div style='font-size:0.78rem; font-weight:700; color:#1e3a8a; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;'>"
+        f"{_header_badge_txt}"
+        "</div>"
+        f"<h1 style='font-size:2.05rem; font-weight:800; color:#0f172a; margin:0;'>{t['app_title']}</h1>"
+        "</div>"
+        f"<div style='text-align:right;'><img src='data:image/png;base64,{EIU_LOGO_B64}' style='max-height:62px; width:auto;'/></div>"
+        "</div>"
+    )
 st.markdown(header_html, unsafe_allow_html=True)
 st.markdown(f"**{t['who_for_bold']}** {t['who_for_text']}")
 st.caption(t["app_caption"])

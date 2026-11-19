@@ -755,14 +755,192 @@ NAV_TABS_I18N = {
 }
 
 
+XMAS_I18N = {
+    "vi": (
+        "🎄 Chế độ Giáng sinh dễ thương",
+        "🎅 Giáng sinh An lành • Sức khỏe Trọn vẹn ❄️",
+        "✨ Merry Christmas • Chúc bạn mùa lễ hội thật ấm áp & khỏe mạnh! 🎁",
+    ),
+    "en": (
+        "🎄 Cute Christmas Theme",
+        "🎅 Merry Christmas • Stay Healthy & Cozy ❄️",
+        "✨ Merry Christmas • Wishing you a warm & healthy holiday season! 🎁",
+    ),
+    "zh": (
+        "🎄 可爱圣诞节主题",
+        "🎅 圣诞快乐 • 健康平安 ❄️",
+        "✨ Merry Christmas • 祝您圣诞温暖、健康相伴！🎁",
+    ),
+    "fr": (
+        "🎄 Thème de Noël Mignon",
+        "🎅 Joyeux Noël • Santé & Douceur ❄️",
+        "✨ Joyeux Noël • Passez de merveilleuses fêtes en pleine santé ! 🎁",
+    ),
+}
+
+
+def inject_christmas_theme():
+    """Injects a cute, cozy, high-contrast Christmas theme with gentle falling snow & twinkling lights."""
+    snowflakes_html = (
+        "<div class='xmas-snow-container' aria-hidden='true'>"
+        "<div class='xmas-flake f1'>❄️</div>"
+        "<div class='xmas-flake f2'>❅</div>"
+        "<div class='xmas-flake f3'>❆</div>"
+        "<div class='xmas-flake f4'>❄️</div>"
+        "<div class='xmas-flake f5'>✦</div>"
+        "<div class='xmas-flake f6'>❅</div>"
+        "<div class='xmas-flake f7'>❄️</div>"
+        "<div class='xmas-flake f8'>❆</div>"
+        "<div class='xmas-flake f9'>❄️</div>"
+        "<div class='xmas-flake f10'>❅</div>"
+        "<div class='xmas-flake f11'>✦</div>"
+        "<div class='xmas-flake f12'>❄️</div>"
+        "</div>"
+        "<div class='xmas-lights-bar' aria-hidden='true'>"
+        "<span class='xbulb b-red'></span><span class='xbulb b-gold'></span><span class='xbulb b-green'></span><span class='xbulb b-blue'></span>"
+        "<span class='xbulb b-red'></span><span class='xbulb b-gold'></span><span class='xbulb b-green'></span><span class='xbulb b-blue'></span>"
+        "<span class='xbulb b-red'></span><span class='xbulb b-gold'></span><span class='xbulb b-green'></span><span class='xbulb b-blue'></span>"
+        "<span class='xbulb b-red'></span><span class='xbulb b-gold'></span><span class='xbulb b-green'></span><span class='xbulb b-blue'></span>"
+        "</div>"
+    )
+    xmas_css = (
+        "<style>"
+        "/* Cozy Winter Christmas Background */"
+        "html, body, .stApp, [data-testid='stAppViewContainer'], [data-testid='stHeader'], main {"
+        "background: linear-gradient(180deg, #eff6ff 0%, #fff5f5 48%, #f0fdf4 100%) !important;"
+        "background-attachment: fixed !important;"
+        "color: #1e293b !important;"
+        "accent-color: #dc2626 !important;"
+        "}"
+        "section[data-testid='stSidebar'], section[data-testid='stSidebar'] > div {"
+        "background: linear-gradient(180deg, #fff1f2 0%, #ffffff 55%, #ecfdf5 100%) !important;"
+        "border-right: 2px solid #fecdd3 !important;"
+        "}"
+        "/* Festive Sidebar Pill Tabs */"
+        "section[data-testid='stSidebar'] div[role='radiogroup'] > label {"
+        "background-color: rgba(255,255,255,0.85) !important;"
+        "border: 1px solid #fecdd3 !important;"
+        "}"
+        "section[data-testid='stSidebar'] div[role='radiogroup'] > label:hover {"
+        "background-color: #ffe4e6 !important;"
+        "border-color: #fb7185 !important;"
+        "}"
+        "section[data-testid='stSidebar'] div[role='radiogroup'] > label:has(input:checked) {"
+        "background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;"
+        "border-color: #991b1b !important;"
+        "box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25) !important;"
+        "}"
+        "/* Frosted Winter Cards */"
+        "[data-testid='stVerticalBlockBorderWrapper'], div[data-testid='stForm'], .clean-card {"
+        "background-color: rgba(255, 255, 255, 0.94) !important;"
+        "border: 1.5px solid #fecdd3 !important;"
+        "border-radius: 18px !important;"
+        "box-shadow: 0 6px 18px rgba(220, 38, 38, 0.06), 0 2px 6px rgba(22, 163, 74, 0.04) !important;"
+        "}"
+        "div[data-testid='stMetric'] {"
+        "background: linear-gradient(180deg, #ffffff 0%, #fff7f7 100%) !important;"
+        "border: 1.5px solid #fecdd3 !important;"
+        "border-radius: 14px !important;"
+        "}"
+        "/* Cute Holly-Red Primary Buttons */"
+        "div[data-testid='stFormSubmitButton'] > button, .stButton > button[kind='primary'] {"
+        "background: linear-gradient(135deg, #ef4444 0%, #dc2626 55%, #b91c1c 100%) !important;"
+        "color: #ffffff !important;"
+        "border: 1.5px solid #fca5a5 !important;"
+        "border-radius: 12px !important;"
+        "box-shadow: 0 5px 14px rgba(220, 38, 38, 0.28) !important;"
+        "}"
+        "div[data-testid='stFormSubmitButton'] > button:hover, .stButton > button[kind='primary']:hover {"
+        "background: linear-gradient(135deg, #dc2626 0%, #16a34a 100%) !important;"
+        "transform: translateY(-2px) !important;"
+        "}"
+        "/* Secondary Buttons with Cute Pine-Green Hover */"
+        ".stButton > button {"
+        "background-color: #ffffff !important;"
+        "border: 1.5px solid #bbf7d0 !important;"
+        "border-radius: 12px !important;"
+        "}"
+        ".stButton > button:hover {"
+        "background-color: #f0fdf4 !important;"
+        "border-color: #16a34a !important;"
+        "}"
+        "/* Festive Disclaimer Box */"
+        ".edu-warning-box {"
+        "background: linear-gradient(135deg, #f0fdf4 0%, #fff1f2 100%) !important;"
+        "border: 1.5px solid #86efac !important;"
+        "border-left: 5px solid #16a34a !important;"
+        "color: #14532d !important;"
+        "}"
+        "/* Candy-Cane Strip Utility */"
+        ".xmas-candy-strip {"
+        "height: 6px; width: 100%; border-radius: 999px; margin-bottom: 10px;"
+        "background: repeating-linear-gradient(45deg, #ef4444, #ef4444 10px, #ffffff 10px, #ffffff 18px, #16a34a 18px, #16a34a 28px, #ffffff 28px, #ffffff 36px);"
+        "}"
+        "/* Twinkling Fairy Lights Bar */"
+        ".xmas-lights-bar {"
+        "position: fixed; top: 0; left: 0; width: 100%; height: 22px;"
+        "display: flex; justify-content: space-around; align-items: flex-start;"
+        "pointer-events: none; z-index: 9998; padding-top: 2px;"
+        "}"
+        ".xbulb {"
+        "width: 9px; height: 13px; border-radius: 50% 50% 55% 55%; display: inline-block;"
+        "animation: xmasTwinkle 2.2s ease-in-out infinite;"
+        "}"
+        ".b-red { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation-delay: 0s; }"
+        ".b-gold { background: #f59e0b; box-shadow: 0 0 8px #fbbf24; animation-delay: 0.55s; }"
+        ".b-green { background: #22c55e; box-shadow: 0 0 8px #22c55e; animation-delay: 1.1s; }"
+        ".b-blue { background: #38bdf8; box-shadow: 0 0 8px #38bdf8; animation-delay: 1.65s; }"
+        "@keyframes xmasTwinkle {"
+        "  0%, 100% { opacity: 0.95; transform: scale(1); }"
+        "  50% { opacity: 0.35; transform: scale(0.82); }"
+        "}"
+        "/* Gentle Falling Snowflakes */"
+        ".xmas-snow-container {"
+        "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;"
+        "pointer-events: none; overflow: hidden; z-index: 9997;"
+        "}"
+        ".xmas-flake {"
+        "position: fixed; top: -10%; color: #93c5fd; opacity: 0.72; user-select: none;"
+        "animation-name: xmasFall, xmasSway;"
+        "animation-timing-function: linear, ease-in-out;"
+        "animation-iteration-count: infinite, infinite;"
+        "text-shadow: 0 0 5px rgba(255,255,255,0.9);"
+        "}"
+        "@keyframes xmasFall {"
+        "  0% { top: -8%; }"
+        "  100% { top: 105%; }"
+        "}"
+        "@keyframes xmasSway {"
+        "  0%, 100% { transform: translateX(0px) rotate(0deg); }"
+        "  50% { transform: translateX(22px) rotate(18deg); }"
+        "}"
+        ".f1 { left: 4%; font-size: 1.05rem; animation-duration: 11s, 3.5s; animation-delay: 0s, 0s; }"
+        ".f2 { left: 12%; font-size: 0.85rem; animation-duration: 14s, 4.2s; animation-delay: 2s, 1s; color: #f472b6; }"
+        ".f3 { left: 21%; font-size: 1.15rem; animation-duration: 12.5s, 3.8s; animation-delay: 4s, 0.5s; }"
+        ".f4 { left: 30%; font-size: 0.95rem; animation-duration: 15s, 4.5s; animation-delay: 1s, 2s; }"
+        ".f5 { left: 39%; font-size: 0.85rem; animation-duration: 10.5s, 3.2s; animation-delay: 5s, 0s; color: #fbbf24; }"
+        ".f6 { left: 48%; font-size: 1.1rem; animation-duration: 13.5s, 4.0s; animation-delay: 3s, 1.5s; }"
+        ".f7 { left: 57%; font-size: 0.9rem; animation-duration: 11.8s, 3.6s; animation-delay: 6s, 0.8s; }"
+        ".f8 { left: 66%; font-size: 1.2rem; animation-duration: 14.5s, 4.4s; animation-delay: 2.5s, 1.2s; }"
+        ".f9 { left: 75%; font-size: 0.95rem; animation-duration: 12s, 3.7s; animation-delay: 0.7s, 2.1s; }"
+        ".f10 { left: 83%; font-size: 0.85rem; animation-duration: 15.5s, 4.6s; animation-delay: 4.5s, 0.4s; color: #f472b6; }"
+        ".f11 { left: 90%; font-size: 0.9rem; animation-duration: 11.2s, 3.3s; animation-delay: 1.8s, 1.6s; color: #fbbf24; }"
+        ".f12 { left: 96%; font-size: 1.1rem; animation-duration: 13s, 4.1s; animation-delay: 3.4s, 0.9s; }"
+        "</style>"
+    )
+    st.markdown(xmas_css + snowflakes_html, unsafe_allow_html=True)
+
+
 def render_sidebar_and_get_lang() -> tuple:
-    """Renders the translated EIU logo, smart language selector, and disclaimer in the sidebar."""
+    """Renders the translated EIU logo, smart language selector, Christmas theme toggle, and disclaimer in the sidebar."""
     if st.session_state.get("_sidebar_done", False):
         lang_code = LANGUAGES[st.session_state.get("lang_choice", "🇬🇧 English")]
         return lang_code, TRANSLATIONS[lang_code]
 
     if "lang_choice" not in st.session_state:
         st.session_state["lang_choice"] = "🇻🇳 Tiếng Việt"
+    if "xmas_theme" not in st.session_state:
+        st.session_state["xmas_theme"] = True
 
     cur_lang = LANGUAGES[st.session_state["lang_choice"]]
     uni_title, uni_sub, _, lang_lbl, _ = LOGO_TEXT_I18N.get(cur_lang, LOGO_TEXT_I18N["en"])
@@ -781,16 +959,38 @@ def render_sidebar_and_get_lang() -> tuple:
     lang_code = LANGUAGES[selected_label]
     t = TRANSLATIONS[lang_code]
     uni_title, uni_sub, _, _, _ = LOGO_TEXT_I18N.get(lang_code, LOGO_TEXT_I18N["en"])
+    xmas_toggle_lbl, xmas_side_badge, _ = XMAS_I18N.get(lang_code, XMAS_I18N["en"])
 
-    logo_slot.markdown(
-        f"<div style='background:#ffffff; padding:14px 14px 12px 14px; border-radius:14px; border:1.5px solid #cbd5e1; "
-        f"text-align:center; margin-bottom:10px; box-shadow:0 3px 10px rgba(15,23,42,0.04);'>"
-        f"<img src='data:image/png;base64,{EIU_LOGO_B64}' style='max-width:165px; height:auto; margin-bottom:6px;'/>"
-        f"<div style='font-size:0.74rem; font-weight:800; color:#1e3a8a; letter-spacing:0.3px; line-height:1.3;'>{uni_title}</div>"
-        f"<div style='font-size:0.7rem; font-weight:600; color:#475569; margin-top:2px;'>{uni_sub}</div>"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
+    # 2b. Cute Christmas Theme Toggle (ON by default!)
+    xmas_on = st.sidebar.toggle(xmas_toggle_lbl, value=st.session_state["xmas_theme"], key="_xmas_toggle_widget")
+    st.session_state["xmas_theme"] = xmas_on
+
+    if xmas_on:
+        inject_christmas_theme()
+        logo_slot.markdown(
+            f"<div style='background:linear-gradient(180deg,#ffffff 0%,#fff5f5 100%); padding:12px 14px 12px 14px; "
+            f"border-radius:16px; border:1.5px solid #fecdd3; text-align:center; margin-bottom:10px; "
+            f"box-shadow:0 4px 12px rgba(220,38,38,0.08);'>"
+            f"<div class='xmas-candy-strip'></div>"
+            f"<img src='data:image/png;base64,{EIU_LOGO_B64}' style='max-width:158px; height:auto; margin-bottom:6px;'/>"
+            f"<div style='font-size:0.74rem; font-weight:800; color:#b91c1c; letter-spacing:0.3px; line-height:1.3;'>{uni_title}</div>"
+            f"<div style='font-size:0.7rem; font-weight:600; color:#15803d; margin-top:2px;'>{uni_sub}</div>"
+            f"<div style='margin-top:8px; display:inline-block; background:#fef2f2; border:1px solid #fca5a5; "
+            f"color:#b91c1c; font-size:0.68rem; font-weight:700; padding:3px 9px; border-radius:999px;'>"
+            f"{xmas_side_badge}</div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        logo_slot.markdown(
+            f"<div style='background:#ffffff; padding:14px 14px 12px 14px; border-radius:14px; border:1.5px solid #cbd5e1; "
+            f"text-align:center; margin-bottom:10px; box-shadow:0 3px 10px rgba(15,23,42,0.04);'>"
+            f"<img src='data:image/png;base64,{EIU_LOGO_B64}' style='max-width:165px; height:auto; margin-bottom:6px;'/>"
+            f"<div style='font-size:0.74rem; font-weight:800; color:#1e3a8a; letter-spacing:0.3px; line-height:1.3;'>{uni_title}</div>"
+            f"<div style='font-size:0.7rem; font-weight:600; color:#475569; margin-top:2px;'>{uni_sub}</div>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
 
     # 3. Placeholder for Navigation Menu (populated by app.py if in flat mode)
     st.session_state["_nav_placeholder"] = st.sidebar.container()

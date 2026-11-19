@@ -763,10 +763,10 @@ THEME_I18N = {
         "opt_tet": "🧧 Tết Nguyên Đán",
         "xmas_side": "🎅 Giáng sinh An lành • Sức khỏe Trọn vẹn ❄️",
         "xmas_banner": "✨ Merry Christmas • Chúc bạn mùa lễ hội thật ấm áp & khỏe mạnh! 🎁",
-        "xmas_music": "🎵 Nhạc Giáng sinh không lời (Silent Night)",
+        "xmas_music": "🎵 Nhạc Giáng sinh không lời (Jingle Bells)",
         "tet_side": "🧧 Chúc Mừng Năm Mới • An Khang Thịnh Vượng 🌸",
         "tet_banner": "✨ Chúc Mừng Năm Mới • Vạn Sự Như Ý & Dồi Dào Sức Khỏe! 🧧🌸",
-        "tet_music": "🎵 Nhạc Xuân không lời (Giai điệu Á Đông)",
+        "tet_music": "🎵 Nhạc Tết không lời (China Rain)",
     },
     "en": {
         "label": "🎨 Theme",
@@ -775,10 +775,10 @@ THEME_I18N = {
         "opt_tet": "🧧 Lunar New Year",
         "xmas_side": "🎅 Merry Christmas • Stay Healthy & Cozy ❄️",
         "xmas_banner": "✨ Merry Christmas • Wishing you a warm & healthy holiday season! 🎁",
-        "xmas_music": "🎵 Christmas Instrumental (Silent Night)",
+        "xmas_music": "🎵 Christmas Instrumental (Jingle Bells)",
         "tet_side": "🧧 Happy Lunar New Year 🌸",
         "tet_banner": "✨ Happy Lunar New Year • Health & Prosperity! 🧧🌸",
-        "tet_music": "🎵 Spring Instrumental",
+        "tet_music": "🎵 Spring Instrumental (China Rain)",
     },
     "zh": {
         "label": "🎨 界面主题",
@@ -787,10 +787,10 @@ THEME_I18N = {
         "opt_tet": "🧧 农历新年",
         "xmas_side": "🎅 圣诞快乐 • 健康平安 ❄️",
         "xmas_banner": "✨ Merry Christmas • 祝您圣诞温暖、健康相伴！🎁",
-        "xmas_music": "🎵 圣诞纯音乐（平安夜钢琴曲）",
+        "xmas_music": "🎵 圣诞纯音乐（Jingle Bells）",
         "tet_side": "🧧 新春快乐 • 万事如意 🌸",
         "tet_banner": "✨ 新春大吉 • 祝您身体健康、阖家幸福！🧧🌸",
-        "tet_music": "🎵 新春纯音乐（民乐轻音乐）",
+        "tet_music": "🎵 新春纯音乐（China Rain - 徐梦圆）",
     },
     "fr": {
         "label": "🎨 Thème",
@@ -799,14 +799,19 @@ THEME_I18N = {
         "opt_tet": "🧧 Nouvel An Lunaire",
         "xmas_side": "🎅 Joyeux Noël • Santé & Douceur ❄️",
         "xmas_banner": "✨ Joyeux Noël • Passez de merveilleuses fêtes en pleine santé ! 🎁",
-        "xmas_music": "🎵 Musique de Noël instrumentale",
+        "xmas_music": "🎵 Musique de Noël (Jingle Bells)",
         "tet_side": "🧧 Bonne Année Lunaire 🌸",
         "tet_banner": "✨ Bonne Année Lunaire • Santé & Bonheur ! 🧧🌸",
-        "tet_music": "🎵 Musique instrumentale",
+        "tet_music": "🎵 Musique instrumentale (China Rain)",
     },
 }
 
-# Royalty-free online instrumental music (Creative Commons by Kevin MacLeod / Wikimedia Commons)
+# Local extracted holiday music files (with online fallback if not yet uploaded)
+HOLIDAY_MUSIC_FILES = {
+    "xmas": "music_xmas.m4a",
+    "tet": "music_tet.m4a",
+}
+
 HOLIDAY_MUSIC_URLS = {
     "xmas": (
         "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Silent%20Night.mp3",
@@ -817,6 +822,28 @@ HOLIDAY_MUSIC_URLS = {
         "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Guzheng%20City.mp3",
     ),
 }
+
+
+@st.cache_data(show_spinner=False)
+def load_holiday_music_b64(theme_key: str) -> str:
+    """Loads the local extracted holiday M4A track as Base64 for instant browser playback."""
+    import base64
+    fname = HOLIDAY_MUSIC_FILES.get(theme_key)
+    if not fname:
+        return ""
+    base_dir = Path(__file__).resolve().parent
+    for cand in [
+        base_dir / fname,
+        base_dir / "data" / fname,
+        base_dir.parent / fname,
+        base_dir.parent / "data" / fname,
+    ]:
+        if cand.exists():
+            try:
+                return base64.b64encode(cand.read_bytes()).decode("ascii")
+            except Exception:
+                return ""
+    return ""
 
 
 def inject_tet_theme():
@@ -1159,19 +1186,26 @@ def render_sidebar_and_get_lang() -> tuple:
     )
     st.session_state["active_theme"] = chosen_theme
 
-    # 2c. Holiday Instrumental Music Player (streamed online, no vocals)
+    # 2c. Holiday Instrumental Music Player (uses user's extracted M4A tracks, with online fallback)
     if chosen_theme in ("xmas", "tet"):
+        m_b64 = load_holiday_music_b64(chosen_theme)
         m_primary, m_fallback = HOLIDAY_MUSIC_URLS[chosen_theme]
         m_title = th_cfg["xmas_music"] if chosen_theme == "xmas" else th_cfg["tet_music"]
         m_border = "#fecdd3" if chosen_theme == "xmas" else "#fcd34d"
         m_bg = "#fff5f5" if chosen_theme == "xmas" else "#fffbeb"
         m_color = "#b91c1c" if chosen_theme == "xmas" else "#92400e"
+        if m_b64:
+            audio_sources = f"<source src='data:audio/mp4;base64,{m_b64}' type='audio/mp4'>"
+        else:
+            audio_sources = (
+                f"<source src='{m_primary}' type='audio/mpeg'>"
+                f"<source src='{m_fallback}' type='audio/ogg'>"
+            )
         st.sidebar.markdown(
             f"<div style='background:{m_bg}; border:1px solid {m_border}; border-radius:12px; padding:8px 10px; margin-bottom:10px;'>"
             f"<div style='font-size:0.74rem; font-weight:700; color:{m_color}; margin-bottom:4px;'>{m_title}</div>"
-            f"<audio controls loop preload='none' style='width:100%; height:34px;'>"
-            f"<source src='{m_primary}' type='audio/mpeg'>"
-            f"<source src='{m_fallback}' type='audio/ogg'>"
+            f"<audio controls loop preload='metadata' style='width:100%; height:34px;'>"
+            f"{audio_sources}"
             f"</audio>"
             f"</div>",
             unsafe_allow_html=True,

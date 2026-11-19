@@ -212,11 +212,11 @@ if "active_threshold" not in st.session_state:
 # ==============================================================================
 # 1. HEADER SECTION WITH TRANSLATED EIU UNIVERSITY BANNER
 # ==============================================================================
-_cur_theme = st.session_state.get("ui_theme", "christmas")
-_th_i18n = getattr(i18n, "THEME_I18N", {}).get(lang_code, {})
+_active_theme = st.session_state.get("active_theme", "xmas")
+_theme_i18n = getattr(i18n, "THEME_I18N", {}).get(lang_code, {})
 
-if _cur_theme == "christmas":
-    _xmas_banner_msg = _th_i18n.get("xmas_banner", "✨ Merry Christmas • Wishing you a warm & healthy holiday season! 🎁")
+if _active_theme == "xmas":
+    _xmas_banner_msg = _theme_i18n.get("xmas_banner", "✨ Merry Christmas • Wishing you a warm & healthy holiday season! 🎁")
     header_html = (
         "<div style='background:linear-gradient(135deg, #ffffff 0%, #fff1f2 55%, #ecfdf5 100%); "
         "border:1.5px solid #fecdd3; border-radius:18px; padding:16px 26px 18px 26px; margin-bottom:14px; "
@@ -240,16 +240,16 @@ if _cur_theme == "christmas":
         "</div>"
         "</div>"
     )
-elif _cur_theme == "tet":
-    _tet_banner_msg = _th_i18n.get("tet_banner", "🏮 Happy Lunar New Year • Wishing you health, joy & prosperity! 🌸")
+elif _active_theme == "tet":
+    _tet_banner_msg = _theme_i18n.get("tet_banner", "✨ Chúc Mừng Năm Mới • Vạn Sự Như Ý & Dồi Dào Sức Khỏe! 🧧🌸")
     header_html = (
-        "<div style='background:linear-gradient(135deg, #ffffff 0%, #fffbeb 55%, #fef2f2 100%); "
+        "<div style='background:linear-gradient(135deg, #ffffff 0%, #fffbeb 52%, #fef2f2 100%); "
         "border:1.5px solid #fcd34d; border-radius:18px; padding:16px 26px 18px 26px; margin-bottom:14px; "
-        "box-shadow:0 6px 18px rgba(217,119,6,0.10);'>"
+        "box-shadow:0 6px 18px rgba(185,28,28,0.09);'>"
         "<div class='tet-gold-strip'></div>"
         "<div style='display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;'>"
         "<div style='flex:1; min-width:280px;'>"
-        "<div style='display:inline-block; background:#fef2f2; border:1px solid #fcd34d; color:#b91c1c; "
+        "<div style='display:inline-block; background:#fef2f2; border:1px solid #fbbf24; color:#b91c1c; "
         "font-size:0.76rem; font-weight:700; padding:3px 11px; border-radius:999px; margin-bottom:7px;'>"
         f"{_tet_banner_msg}"
         "</div>"
@@ -260,7 +260,7 @@ elif _cur_theme == "tet":
         "</div>"
         "<div style='text-align:right;'>"
         f"<img src='data:image/png;base64,{EIU_LOGO_B64}' style='max-height:60px; width:auto;'/>"
-        "<div style='font-size:1.15rem; margin-top:4px; letter-spacing:4px;'>🏮🌼🧧🌸✨</div>"
+        "<div style='font-size:1.15rem; margin-top:4px; letter-spacing:4px;'>🌸🌼🧧🏮</div>"
         "</div>"
         "</div>"
         "</div>"
@@ -412,8 +412,8 @@ DOC_TEXT = {
         "section_title": "🩺 Phòng Hội Chẩn & Giao Lưu Cùng BS. Minh Quân & BS. Thảo Vy",
         "m_name": "👨‍⚕️ BS. Minh Quân (Chuyên khoa Nội tiết & AI)",
         "f_name": "👩‍⚕️ BS. Thảo Vy (Chuyên khoa Dinh dưỡng & Lối sống)",
-        "m_idle": "Chào bạn! Tôi là <b>BS. Minh Quân</b>. Hãy điền 7 câu hỏi trên rồi bấm <b>Phân tích ngay</b> để tôi đánh giá điểm rủi ro cho bạn nhé (hoặc hỏi tôi bất cứ câu gì từ sức khỏe tới chuyện đời thường bên dưới!).",
-        "f_idle": "Xin chào! Mình là <b>BS. Thảo Vy</b>. Bấm <b>Phân tích ngay</b> để mình tính BMI và lên thực đơn cho bạn nha — kể cả hỏi chuyện thi IELTS xong đi đâu chơi tụi mình cũng tư vấn tuốt!",
+        "m_idle": "Chào bạn! Tôi là <b>BS. Minh Quân</b>. Tôi sẵn sàng hỗ trợ kiểm tra sức khỏe và giải đáp mọi thắc mắc của bạn.",
+        "f_idle": "Xin chào! Mình là <b>BS. Thảo Vy</b>. Bạn cần tư vấn sức khỏe, dinh dưỡng hay hỏi bất kỳ thông tin gì cứ nhắn bên dưới nhé!",
         "m_flag": f"Điểm tương đồng của bạn là <b>{prob_gb:.1%}</b> (vượt ngưỡng tầm soát <b>{active_th:.2f}</b>). Yếu tố nổi bật nhất là <b>{top_feat_label}</b>. Bạn nên đặt lịch làm xét nghiệm <b>Đường huyết lúc đói (FPG)</b> hoặc <b>HbA1c</b> để kiểm tra nhé.",
         "m_safe": f"Tin vui! Điểm rủi ro của bạn chỉ là <b>{prob_gb:.1%}</b> (thấp hơn ngưỡng cảnh báo <b>{active_th:.2f}</b>). Bạn chưa cần xét nghiệm khẩn cấp hôm nay, chỉ cần duy trì khám sức khỏe định kỳ.",
         "f_flag": f"BMI hiện tại của bạn là <b>{bmi_val:.1f} kg/m²</b>. Nếu bạn giảm nhẹ BMI xuống <b>{lower_bmi:.1f} kg/m²</b> kết hợp đi bộ 30 phút/ngày, điểm rủi ro sẽ giảm xuống còn <b>{prob_whatif:.1%}</b>!",
@@ -437,8 +437,8 @@ DOC_TEXT = {
         "section_title": "🩺 AI Medical Consultation with Dr. Ethan Brooks & Dr. Clara Bennett",
         "m_name": "👨‍⚕️ Dr. Ethan Brooks (Endocrinology & AI Specialist)",
         "f_name": "👩‍⚕️ Dr. Clara Bennett (Nutrition & Lifestyle Specialist)",
-        "m_idle": "Hello! I'm <b>Dr. Ethan Brooks</b>. Fill in the 7 questions above and click <b>Analyze</b>, or ask our AI doctors anything—serious or silly—below!",
-        "f_idle": "Hi! I'm <b>Dr. Clara Bennett</b>. Click <b>Analyze</b> to get your BMI & wellness check—and feel free to chat with us about anything!",
+        "m_idle": "Hello! I'm <b>Dr. Ethan Brooks</b>. I'm here to help with your health screening and answer any question you have.",
+        "f_idle": "Hi! I'm <b>Dr. Clara Bennett</b>. Feel free to ask about nutrition, lifestyle, or anything on your mind below!",
         "m_flag": f"Your estimated risk score is <b>{prob_gb:.1%}</b> (above our <b>{active_th:.2f}</b> cutoff; top factor: <b>{top_feat_label}</b>). I recommend asking your doctor for a routine <b>Fasting Plasma Glucose (FPG)</b> or <b>HbA1c</b> test.",
         "m_safe": f"Good news! Your estimated score is <b>{prob_gb:.1%}</b> (below our <b>{active_th:.2f}</b> cutoff). No urgent lab test is flagged today.",
         "f_flag": f"Your BMI is <b>{bmi_val:.1f} kg/m²</b>. Lowering your BMI toward <b>{lower_bmi:.1f} kg/m²</b> with 30 minutes of daily walking reduces your risk score to <b>{prob_whatif:.1%}</b>!",
@@ -462,8 +462,8 @@ DOC_TEXT = {
         "section_title": "🩺 与林明轩医生 (Dr. Lin) & 苏婉清医生 (Dr. Su) 互动会诊",
         "m_name": "👨‍⚕️ 林明轩医生（内分泌与 AI 专家）",
         "f_name": "👩‍⚕️ 苏婉清医生（营养与生活方式专家）",
-        "m_idle": "您好！我是<b>林明轩医生</b>。请填写上方 7 个问题并点击<b>立即分析</b>，或在下方问我们任何严肃或搞笑的问题！",
-        "f_idle": "嗨！我是<b>苏婉清医生</b>。无论是体检还是“考完雅思去哪玩”，都可以在下方问我们哦！",
+        "m_idle": "您好！我是<b>林明轩医生</b>。随时为您解答健康筛查或任何日常疑问。",
+        "f_idle": "您好！我是<b>苏婉清医生</b>。无论是营养建议还是任何问题，都欢迎在下方提问！",
         "m_flag": f"您的估计风险得分为 <b>{prob_gb:.1%}</b>，高于阈值 <b>{active_th:.2f}</b>（主要因素：<b>{top_feat_label}</b>）。建议咨询医生做 <b>FPG</b> 或 <b>HbA1c</b> 检测。",
         "m_safe": f"好消息！您的风险得分为 <b>{prob_gb:.1%}</b>，低于阈值 <b>{active_th:.2f}</b>。目前无需紧急检测。",
         "f_flag": f"您的 BMI 为 <b>{bmi_val:.1f} kg/m²</b>。若将 BMI 降至 <b>{lower_bmi:.1f} kg/m²</b>，风险将降至 <b>{prob_whatif:.1%}</b>！",
@@ -487,8 +487,8 @@ DOC_TEXT = {
         "section_title": "🩺 Consultation Interactive avec Dr Julien Moreau & Dr Camille Laurent",
         "m_name": "👨‍⚕️ Dr Julien Moreau (Endocrinologie & IA)",
         "f_name": "👩‍⚕️ Dr Camille Laurent (Nutrition & Mode de vie)",
-        "m_idle": "Bonjour ! Je suis le <b>Dr Julien Moreau</b>. Remplissez les 7 questions et cliquez sur <b>Analyser</b>, ou posez-nous n'importe quelle question ci-dessous !",
-        "f_idle": "Salut ! Je suis le <b>Dr Camille Laurent</b>. Posez-nous toutes vos questions sérieuses ou amusantes ci-dessous !",
+        "m_idle": "Bonjour ! Je suis le <b>Dr Julien Moreau</b>. Je suis là pour vous accompagner et répondre à toutes vos questions.",
+        "f_idle": "Bonjour ! Je suis le <b>Dr Camille Laurent</b>. N'hésitez pas à poser toutes vos questions ci-dessous !",
         "m_flag": f"Votre score est de <b>{prob_gb:.1%}</b> (au-dessus du seuil <b>{active_th:.2f}</b> ; facteur clé : <b>{top_feat_label}</b>). Demandez un test <b>FPG</b> ou <b>HbA1c</b> à votre médecin.",
         "m_safe": f"Bonne nouvelle ! Votre score est de <b>{prob_gb:.1%}</b> (sous le seuil <b>{active_th:.2f}</b>). Aucun test urgent requis.",
         "f_flag": f"Votre IMC est de <b>{bmi_val:.1f} kg/m²</b>. En le réduisant vers <b>{lower_bmi:.1f} kg/m²</b>, votre score baisserait à <b>{prob_whatif:.1%}</b> !",
@@ -670,22 +670,10 @@ clean_m_voice = re.sub(r"<[^>]+>", "", m_speech)
 clean_f_voice = re.sub(r"<[^>]+>", "", f_speech)
 
 AUDIO_BTN_LABELS = {
-    "vi": (
-        "🔊 Nghe BS. Minh Quân nói",
-        "🔊 Nghe BS. Thảo Vy nói",
-    ),
-    "en": (
-        "🔊 Hear Dr. Ethan Brooks",
-        "🔊 Hear Dr. Clara Bennett",
-    ),
-    "zh": (
-        "🔊 收听林明轩医生语音",
-        "🔊 收听苏婉清医生语音",
-    ),
-    "fr": (
-        "🔊 Écouter Dr Julien Moreau",
-        "🔊 Écouter Dr Camille Laurent",
-    ),
+    "vi": ("🔊 Nghe BS. Minh Quân nói", "🔊 Nghe BS. Thảo Vy nói"),
+    "en": ("🔊 Hear Dr. Ethan Brooks", "🔊 Hear Dr. Clara Bennett"),
+    "zh": ("🔊 收听林明轩医生语音", "🔊 收听苏婉清医生语音"),
+    "fr": ("🔊 Écouter Dr Julien Moreau", "🔊 Écouter Dr Camille Laurent"),
 }
 btn_m_lbl, btn_f_lbl = AUDIO_BTN_LABELS.get(lang_code, AUDIO_BTN_LABELS["en"])
 
@@ -729,13 +717,38 @@ def fetch_internet_knowledge(query: str, lang_key: str) -> str:
     }
     hl, gl, ceid = news_cfg.get(lang_key, ("en-US", "US", "US:en"))
 
+    # 0. DuckDuckGo HTML Web Search (Real Google-like organic web snippets for ANY topic!)
+    try:
+        import html as _html
+        ddg_html_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+        req_ddg = urllib.request.Request(
+            ddg_html_url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Accept-Language": f"{hl},en;q=0.8",
+            },
+        )
+        with urllib.request.urlopen(req_ddg, timeout=5) as resp_ddg:
+            raw_html = resp_ddg.read().decode("utf-8", errors="ignore")
+            raw_snips = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', raw_html, flags=re.S)
+            cleaned_snips = []
+            for s in raw_snips[:4]:
+                clean_s = _html.unescape(re.sub(r"<[^>]+>", "", s)).strip()
+                clean_s = re.sub(r"\s+", " ", clean_s)
+                if clean_s and len(clean_s) > 25:
+                    cleaned_snips.append(clean_s)
+            if cleaned_snips:
+                snippets.append("[Kết quả tìm kiếm Web]: " + " | ".join(cleaned_snips))
+    except Exception:
+        pass
+
     # 1. Google News RSS (Live real-time news, gold price, weather, sports, events!)
     try:
         rss_url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}&hl={hl}&gl={gl}&ceid={ceid}"
         req_rss = urllib.request.Request(rss_url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req_rss, timeout=4) as resp_rss:
             root = ET.fromstring(resp_rss.read())
-            headlines = [it.find("title").text for it in root.findall(".//item")[:3] if it.find("title") is not None]
+            headlines = [it.find("title").text for it in root.findall(".//item")[:4] if it.find("title") is not None]
             if headlines:
                 snippets.append("[Tin tức / Dữ liệu thời gian thực]: " + " | ".join(headlines))
     except Exception:
@@ -749,11 +762,11 @@ def fetch_internet_knowledge(query: str, lang_key: str) -> str:
             ddata = json.loads(resp3.read().decode("utf-8"))
             abs_txt = ddata.get("AbstractText", "").strip()
             if abs_txt:
-                snippets.append(f"[Web Summary]: {abs_txt[:400]}")
+                snippets.append(f"[Web Summary]: {abs_txt[:420]}")
     except Exception:
         pass
 
-    # 3. Wikipedia only for non-realtime / encyclopedic questions (avoid returning unrelated landmarks for "today/price")
+    # 3. Wikipedia for encyclopedic / knowledge queries
     is_realtime = any(w in q_low for w in ["hôm nay", "giá", "today", "price", "weather", "thời tiết", "tỷ giá", "mấy giờ", "news", "tin tức", "xổ số", "kết quả"])
     if not is_realtime:
         wiki_lang = {"vi": "vi", "en": "en", "zh": "zh", "fr": "fr"}.get(lang_key, "en")
@@ -774,7 +787,7 @@ def fetch_internet_knowledge(query: str, lang_key: str) -> str:
                         sdata = json.loads(resp2.read().decode("utf-8"))
                         ext = sdata.get("extract", "").strip()
                         if ext:
-                            snippets.append(f"[Wikipedia - {title}]: {ext[:420]}")
+                            snippets.append(f"[Wikipedia - {title}]: {ext[:450]}")
         except Exception:
             pass
 
@@ -784,10 +797,10 @@ def fetch_internet_knowledge(query: str, lang_key: str) -> str:
 @st.cache_data(show_spinner=False, ttl=300)
 def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f_label: str) -> tuple:
     """
-    Expert AI engine:
+    Google-style Universal AI engine:
     0) Official Google Gemini 2.5 Flash (if GEMINI_API_KEY is set in st.secrets or env)
-    1) Free Pollinations AI LLM + Live Internet grounding (Google News RSS / DuckDuckGo / Wikipedia)
-    2) Live Web News/Summary fallback (clean, factual, zero goofy rambling)
+    1) Free Pollinations AI LLM (searchgpt / openai) grounded in live DuckDuckGo Web Search + Google News + Wikipedia
+    2) Structured Google-style Web Search snippet synthesizer fallback (zero generic filler!)
     """
     import os
     import urllib.parse
@@ -796,19 +809,18 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
     lang_names = {"vi": "Vietnamese", "en": "English", "zh": "Simplified Chinese", "fr": "French"}
     target_lang = lang_names.get(lang_key, "Vietnamese")
 
-    context_block = f"\nLive Internet facts found:\n{web_context}\n" if web_context else ""
+    context_block = f"\nLive Web Search Results:\n{web_context}\n" if web_context else ""
     system_prompt = (
-        f"You are roleplaying TWO senior, deeply empathetic, warm, and highly knowledgeable specialists: "
-        f"1) {doc_m_label} (calm, reassuring, analytically sharp, speaks with genuine care) and "
-        f"2) {doc_f_label} (warm-hearted, encouraging, practical, speaks with gentle human emotion). "
-        f"Answer the user's question directly, accurately, and thoughtfully in {target_lang}"
-        f"{' using the live Internet facts below' if web_context else ''}. "
-        f"Strike the perfect balance: sound like caring, seasoned experts talking to a friend—use natural warmth, "
-        f"empathetic phrasing, and smooth rhythm (not stiff or robotic, and not silly/flippant). "
-        f"If the question is outside medicine, answer it accurately and insightfully like a cultured, caring mentor. "
+        f"You are an intelligent, Google-AI-Overview-level assistant roleplaying TWO warm, articulate, knowledgeable specialists: "
+        f"1) {doc_m_label} (clear, direct, accurate, explains facts cleanly like Google Search AI Overview) and "
+        f"2) {doc_f_label} (warm, practical, adds helpful tips, key takeaways, or extra context). "
+        f"IMPORTANT: The user can ask ANY question on earth (general knowledge, news, math, coding, travel, food, sports, history, science, health, daily life)—"
+        f"do NOT force the answer back to diabetes or the 7-question form unless the user specifically asks about diabetes/health. "
+        f"Answer directly, accurately, and concisely in {target_lang}"
+        f"{' grounded in the live Web Search results below' if web_context else ''}. "
         f"Format your reply as TWO concise paragraphs separated by '||SPLIT||': "
-        f"Paragraph 1 = {doc_m_label}'s warm, expert answer (2-3 natural sentences). "
-        f"Paragraph 2 = {doc_f_label}'s caring, practical follow-up (1-2 natural sentences). "
+        f"Paragraph 1 = {doc_m_label}'s direct, factual Google-style answer (2-4 crisp sentences). "
+        f"Paragraph 2 = {doc_f_label}'s helpful practical tip or extra detail (1-2 natural sentences). "
         f"Do not prefix paragraphs with speaker names.{context_block}"
     )
 
@@ -830,7 +842,7 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
             mid = max(1, len(sents) // 2)
             return " ".join(sents[:mid]), " ".join(sents[mid:])
         return txt, (
-            "Nếu bạn cần giải thích sâu hơn về chỉ số sức khỏe hoặc bất kỳ chủ đề nào khác, cứ đặt câu hỏi tiếp nhé."
+            "Nếu bạn muốn tìm hiểu sâu hơn hoặc hỏi thêm chủ đề khác, cứ nhắn bên dưới nhé."
             if lang_key == "vi"
             else "Feel free to ask if you would like more details on this topic."
         )
@@ -853,7 +865,7 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
                         "parts": [{"text": f"{system_prompt}\n\nUser question: {question_text}"}],
                     }
                 ],
-                "generationConfig": {"temperature": 0.4, "maxOutputTokens": 450},
+                "generationConfig": {"temperature": 0.35, "maxOutputTokens": 500},
             }
             req_g = urllib.request.Request(
                 gem_url,
@@ -870,7 +882,33 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
         except Exception:
             pass
 
-    # Attempt 1: Pollinations GET (zero-key backup)
+    # Attempt 1: Pollinations OpenAI POST (openai / searchgpt)
+    for _pmodel in ("openai", "searchgpt"):
+        try:
+            payload = {
+                "model": _pmodel,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": question_text},
+                ],
+                "temperature": 0.35,
+            }
+            req2 = urllib.request.Request(
+                "https://text.pollinations.ai/openai",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req2, timeout=12) as resp2:
+                raw = json.loads(resp2.read().decode("utf-8"))
+                content2 = raw["choices"][0]["message"]["content"]
+                m_ans, f_ans = _split_reply(content2)
+                if m_ans and f_ans:
+                    return m_ans, f_ans
+        except Exception:
+            continue
+
+    # Attempt 2: Pollinations GET (zero-key backup)
     try:
         full_prompt = f"{system_prompt}\n\nUser question: {question_text}"
         url = "https://text.pollinations.ai/" + urllib.parse.quote(full_prompt)
@@ -883,42 +921,19 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
     except Exception:
         pass
 
-    # Attempt 2: Pollinations OpenAI POST
-    try:
-        payload = {
-            "model": "openai",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": question_text},
-            ],
-            "temperature": 0.4,
-        }
-        req2 = urllib.request.Request(
-            "https://text.pollinations.ai/openai",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req2, timeout=10) as resp2:
-            raw = json.loads(resp2.read().decode("utf-8"))
-            content2 = raw["choices"][0]["message"]["content"]
-            m_ans, f_ans = _split_reply(content2)
-            if m_ans and f_ans:
-                return m_ans, f_ans
-    except Exception:
-        pass
-
-    # Attempt 3: Live Google News / DuckDuckGo / Wikipedia factual fallback
+    # Attempt 3: Clean Google-style synthesized answer directly from live Web Search / News / Wikipedia
     if web_context:
-        clean_web = re.sub(r"\[[^\]]+\]:\s*", "", web_context).replace("\n", " ")
+        parts = [re.sub(r"^\[[^\]]+\]:\s*", "", ln).strip() for ln in web_context.splitlines() if ln.strip()]
+        primary_info = parts[0][:460] if parts else ""
+        extra_info = parts[1][:260] if len(parts) > 1 else ""
         if lang_key == "vi":
             return (
-                f"Thông tin cập nhật từ nguồn tin tức & tra cứu trực tuyến: {clean_web[:420]}",
-                "Đây là dữ liệu tổng hợp mới nhất từ Internet cho câu hỏi của bạn.",
+                f"Theo kết quả tra cứu trực tuyến mới nhất: {primary_info}",
+                f"Thông tin bổ sung: {extra_info}" if extra_info else "Bạn có thể đặt câu hỏi chi tiết hơn để mình tra cứu chính xác hơn nhé!",
             )
         return (
-            f"Latest verified information from live web sources: {clean_web[:420]}",
-            "Hope this factual summary helps answer your question.",
+            f"Based on live web search results: {primary_info}",
+            f"Additional context: {extra_info}" if extra_info else "Feel free to ask a more specific follow-up question!",
         )
 
     return None, None
@@ -927,24 +942,9 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
 def generate_doctor_replies(question_text: str, use_live_llm: bool = True) -> tuple:
     q = question_text.lower().strip()
 
+    # Only keep exact app-specific medical/metric shortcuts; send ALL other custom questions to live Web Search + AI!
     if lang_code == "vi":
-        if any(w in q for w in ["ielts", "toeic", "thi", "học", "ôn thi"]):
-            ans_m = (
-                "Chúc mừng bạn sắp/vừa vượt ải IELTS nha! Thi xong rồi thì việc đầu tiên là **đóng sách vở lại ngay**, đi ăn một bữa lẩu nướng hoặc buffet hải sản thật đã để thưởng cho bộ não vừa chạy hết công suất!"
-            )
-            ans_f = (
-                "Chuẩn luôn! Nếu thích chill nhẹ nhàng ở Sài Gòn/Bình Dương thì bạn có thể rủ hội bạn đi cà phê sân vườn, xem một bộ phim hài ngoài rạp hoặc làm chuyến đi Vũng Tàu/Đà Lạt 2 ngày 1 đêm cho hồi phục tinh thần — nhớ ngủ bù cho đã nhé!"
-            )
-            return ans_m, ans_f
-        if any(w in q for w in ["đi đâu", "chơi", "du lịch", "cuối tuần", "chill", "xả stress", "phim"]):
-            ans_m = (
-                "Cuối tuần hoặc lúc cần xả stress thì cứ chọn những nơi có không gian thoáng đãng như công viên, phố đi bộ, đi bowling hoặc rạp chiếu phim cùng bạn bè — vừa vui vừa giúp đầu óc giải tỏa 100%!"
-            )
-            ans_f = (
-                "Còn nếu bạn thích kiểu nhẹ nhàng hơn thì tìm một quán cà phê yên tĩnh đọc truyện, đi dạo bờ sông buổi chiều mát, hoặc rủ nhóm bạn đi ăn đồ nướng là hết sảy luôn đó!"
-            )
-            return ans_m, ans_f
-        if any(w in q for w in ["recall", "precision", "tối ưu", "f2", "pr-auc", "chỉ số nào"]):
+        if any(w in q for w in ["recall", "precision", "f2", "pr-auc"]):
             ans_m = (
                 f"Trong bài toán tầm soát tiểu đường tại nhà, <b>Recall (Độ nhạy = {rec_now:.1%}) quan trọng hơn nhiều so với Precision ({prec_now:.1%})!</b> "
                 f"Vì báo động giả chỉ tốn ~45$ xét nghiệm máu kiểm tra, còn bỏ sót bệnh gây biến chứng nặng. Chỉ số tối ưu nhất là "
@@ -954,48 +954,15 @@ def generate_doctor_replies(question_text: str, use_live_llm: bool = True) -> tu
                 "Bạn có thể tự kéo thử tỷ lệ chi phí trên trang <b>Ngưỡng cắt & Chi phí</b> ở thanh menu bên trái để xem Recall và F2-Score thay đổi trực quan nhé!"
             )
             return ans_m, ans_f
-        if any(w in q for w in ["trà sữa", "trân châu", "topping", "kẹo", "bánh", "nước ngọt", "coca", "pepsi"]):
-            ans_m = (
-                "Haha, 'trà sữa 0% đường nhưng full trân châu hoàng kim + kem cheese' là cú lừa kinh điển nhất quả đất! "
-                "Trân châu làm từ tinh bột sắn nấu đẫm đường đen nên làm đường huyết tăng rất nhanh đó."
-            )
-            ans_f = (
-                "Nếu thèm quá thì lâu lâu uống 1 ly trà ô long/hồng trà không đường, đổi topping sang hạt chia hoặc nha đam không đường vừa ngon vừa đỡ lo tăng cân nha!"
-            )
-            return ans_m, ans_f
-        if any(w in q for w in ["kiến", "tiểu", "đái", "vệ sinh"]):
-            ans_m = (
-                "Nghe tưởng đùa nhưng trong lịch sử y học là thật 100% đấy! Khi đường trong máu vượt ngưỡng thận (~180 mg/dL), đường tràn ra nước tiểu làm kiến bu thật. "
-                "Nhưng thời đại hiện đại rồi, đừng đợi kiến bu mới đi khám — xét nghiệm máu FPG chỉ mất 5 phút thôi!"
-            )
-            ans_f = "Haha, dùng kiến khám bệnh là chuyện của vài thế kỷ trước rồi — bây giờ cứ kiểm tra sức khỏe định kỳ là chuẩn nhất nhé!"
-            return ans_m, ans_f
-        if any(w in q for w in ["đẹp", "xinh", "tim đập", "người yêu", "crush", "thất tình", "yêu", "cưới", "hẹn hò"]):
-            ans_m = (
-                "Haha, tim đập nhanh khi gặp người đẹp là triệu chứng 'rung động' chứ không phải bệnh đâu! "
-                "Còn nếu tự dưng đói bụng mà thấy tim đập nhanh, run tay, vã mồ hôi lạnh thì mới cần coi chừng hạ đường huyết nhé."
-            )
-            ans_f = (
-                "Cảm ơn lời khen ngọt ngào của bạn nha! Tình cảm vui vẻ giúp giảm stress rất tốt cho sức khỏe đó — chúc bạn sớm có tin vui nha!"
-            )
-            return ans_m, ans_f
-        if any(w in q for w in ["xét nghiệm", "máu", "fpg", "hba1c"]):
+        if any(w in q for w in ["xét nghiệm máu nào", "yêu cầu xét nghiệm", "fpg", "hba1c"]):
             ans_m = (
                 f"Bạn nên yêu cầu bác sĩ làm <b>Xét nghiệm đường huyết lúc đói (FPG — nhịn ăn 8 tiếng)</b> hoặc <b>HbA1c</b> "
                 f"(đánh giá đường huyết trung bình 3 tháng). Với điểm số <b>{prob_gb:.1%}</b> của bạn, đây là cách kiểm tra chính xác nhất!"
             )
             ans_f = "Tối hôm trước ngày đi lấy máu FPG bạn nhớ nhịn ăn từ 22h đêm (chỉ uống nước lọc) và ngủ sớm để kết quả chuẩn nhất nhé!"
             return ans_m, ans_f
-        if any(w in q for w in ["thực đơn", "bài tập", "chế độ ăn"]):
-            ans_m = (
-                f"Khi giảm BMI từ <b>{bmi_val:.1f}</b> xuống <b>{lower_bmi:.1f} kg/m²</b>, độ nhạy insulin cải thiện rõ rệt, giúp điểm rủi ro giảm xuống <b>{prob_whatif:.1%}</b>."
-            )
-            ans_f = (
-                f"Với BMI <b>{bmi_val:.1f}</b>, bạn hãy áp dụng quy tắc Đĩa thức ăn: <b>1/2 rau xanh</b>, <b>1/4 đạm</b> (cá, ức gà, đậu phụ), <b>1/4 tinh bột nguyên cám</b>, và đi bộ 30 phút/ngày nha!"
-            )
-            return ans_m, ans_f
 
-    # Call Free Live AI LLM for ANY general, silly, or custom question!
+    # Call Google-style Live Web Search + AI LLM for ANY arbitrary question!
     if use_live_llm:
         llm_m, llm_f = call_free_llm_api(question_text, lang_code, d_cfg["m_name"], d_cfg["f_name"])
         if llm_m and llm_f:
@@ -1003,19 +970,15 @@ def generate_doctor_replies(question_text: str, use_live_llm: bool = True) -> tu
 
     if lang_code == "vi":
         ans_m = (
-            f"Haha, câu hỏi <i>\"{question_text}\"</i> nghe thú vị ghê! Theo tôi thì bạn cứ làm điều gì khiến mình thấy thoải mái, "
-            f"vui vẻ và hợp túi tiền nhất lúc này — miễn sao giữ được năng lượng tích cực là tuyệt vời rồi!"
+            f"Hiện tại kết nối tìm kiếm trực tuyến đang bận nên tôi chưa tải được dữ liệu mới nhất cho câu hỏi <i>\"{question_text}\"</i>. "
+            f"Bạn hãy bấm gửi lại sau vài giây nhé!"
         )
-        ans_f = (
-            "Đồng ý hai tay luôn! Mà dù bận rộn hay đi chơi đâu thì cũng nhớ uống đủ nước, ngủ đủ giấc và giữ tinh thần thư giãn nhé — có gì vui cứ kể tụi mình nghe tiếp nha!"
-        )
+        ans_f = "Nếu bạn muốn hỏi về sức khỏe, dinh dưỡng hoặc bất kỳ chủ đề nào khác, cứ thử hỏi lại ngay nhé!"
     else:
         ans_m = (
-            f"Haha, I love your question (<i>\"{question_text}\"</i>)! Honestly, do whatever helps you recharge and enjoy your day—staying happy and stress-free is great for overall well-being!"
+            f"The live search connection is momentarily busy for <i>\"{question_text}\"</i>. Please try sending your question again in a few seconds!"
         )
-        ans_f = (
-            "Totally agree! Wherever you go or whatever you decide, remember to stay hydrated, get good sleep, and have fun!"
-        )
+        ans_f = "Feel free to retry or ask another question anytime!"
     return ans_m, ans_f
 
 

@@ -3,9 +3,7 @@ i18n.py — 4-Language Translation Dictionary (English, Tiếng Việt, 中文, 
 ==================================================================================================
 """
 
-import io
 import json
-import wave
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -760,183 +758,101 @@ NAV_TABS_I18N = {
 THEME_I18N = {
     "vi": {
         "label": "🎨 Chủ đề giao diện",
-        "christmas": "🎄 Giáng sinh",
-        "tet": "🧧 Tết Nguyên Đán",
-        "medical": "🩺 Y tế Chuẩn",
+        "opt_standard": "🩺 Y tế (Mặc định)",
+        "opt_xmas": "🎄 Giáng sinh",
+        "opt_tet": "🧧 Tết Nguyên Đán",
         "xmas_side": "🎅 Giáng sinh An lành • Sức khỏe Trọn vẹn ❄️",
         "xmas_banner": "✨ Merry Christmas • Chúc bạn mùa lễ hội thật ấm áp & khỏe mạnh! 🎁",
-        "xmas_music": "🎵 Nhạc Giáng sinh (Không lời)",
-        "tet_side": "🧧 Chúc Mừng Năm Mới • Vạn Sự An Khang 🌸",
-        "tet_banner": "🏮 Chúc Mừng Năm Mới • Sức Khỏe Dồi Dào, An Khang Thịnh Vượng! 🌸",
-        "tet_music": "🎵 Nhạc Tết Xuân Về (Không lời)",
+        "xmas_music": "🎵 Nhạc Giáng sinh không lời (Silent Night)",
+        "tet_side": "🧧 Chúc Mừng Năm Mới • An Khang Thịnh Vượng 🌸",
+        "tet_banner": "✨ Chúc Mừng Năm Mới • Vạn Sự Như Ý & Dồi Dào Sức Khỏe! 🧧🌸",
+        "tet_music": "🎵 Nhạc Xuân không lời (Giai điệu Á Đông)",
     },
     "en": {
         "label": "🎨 Theme",
-        "christmas": "🎄 Christmas",
-        "tet": "🧧 Lunar New Year (Tết)",
-        "medical": "🩺 Standard Medical",
-        "xmas_side": "🎅 Merry Christmas • Stay Healthy ❄️",
+        "opt_standard": "🩺 Standard Medical",
+        "opt_xmas": "🎄 Christmas",
+        "opt_tet": "🧧 Lunar New Year",
+        "xmas_side": "🎅 Merry Christmas • Stay Healthy & Cozy ❄️",
         "xmas_banner": "✨ Merry Christmas • Wishing you a warm & healthy holiday season! 🎁",
-        "xmas_music": "🎵 Christmas Instrumental",
-        "tet_side": "🧧 Happy Lunar New Year • Good Health 🌸",
-        "tet_banner": "🏮 Happy Lunar New Year • Wishing you health, joy & prosperity! 🌸",
-        "tet_music": "🎵 Lunar New Year Instrumental",
+        "xmas_music": "🎵 Christmas Instrumental (Silent Night)",
+        "tet_side": "🧧 Happy Lunar New Year 🌸",
+        "tet_banner": "✨ Happy Lunar New Year • Health & Prosperity! 🧧🌸",
+        "tet_music": "🎵 Spring Instrumental",
     },
     "zh": {
         "label": "🎨 界面主题",
-        "christmas": "🎄 圣诞节",
-        "tet": "🧧 农历新年 (春节)",
-        "medical": "🩺 标准医疗",
+        "opt_standard": "🩺 默认医疗",
+        "opt_xmas": "🎄 圣诞节",
+        "opt_tet": "🧧 农历新年",
         "xmas_side": "🎅 圣诞快乐 • 健康平安 ❄️",
         "xmas_banner": "✨ Merry Christmas • 祝您圣诞温暖、健康相伴！🎁",
-        "xmas_music": "🎵 圣诞纯音乐",
+        "xmas_music": "🎵 圣诞纯音乐（平安夜钢琴曲）",
         "tet_side": "🧧 新春快乐 • 万事如意 🌸",
-        "tet_banner": "🏮 新春快乐 • 祝您身体健康、阖家幸福！🌸",
-        "tet_music": "🎵 新春纯音乐",
+        "tet_banner": "✨ 新春大吉 • 祝您身体健康、阖家幸福！🧧🌸",
+        "tet_music": "🎵 新春纯音乐（民乐轻音乐）",
     },
     "fr": {
         "label": "🎨 Thème",
-        "christmas": "🎄 Noël",
-        "tet": "🧧 Nouvel An Lunaire (Tết)",
-        "medical": "🩺 Médical Standard",
+        "opt_standard": "🩺 Médical Standard",
+        "opt_xmas": "🎄 Noël",
+        "opt_tet": "🧧 Nouvel An Lunaire",
         "xmas_side": "🎅 Joyeux Noël • Santé & Douceur ❄️",
         "xmas_banner": "✨ Joyeux Noël • Passez de merveilleuses fêtes en pleine santé ! 🎁",
-        "xmas_music": "🎵 Musique de Noël (Instrumentale)",
-        "tet_side": "🧧 Bonne Année Lunaire • Santé 🌸",
-        "tet_banner": "🏮 Bonne Année Lunaire • Santé, bonheur et prospérité ! 🌸",
-        "tet_music": "🎵 Musique du Tết (Instrumentale)",
+        "xmas_music": "🎵 Musique de Noël instrumentale",
+        "tet_side": "🧧 Bonne Année Lunaire 🌸",
+        "tet_banner": "✨ Bonne Année Lunaire • Santé & Bonheur ! 🧧🌸",
+        "tet_music": "🎵 Musique instrumentale",
     },
 }
 
-
-@st.cache_data(show_spinner=False)
-def build_holiday_music_wav(theme_key: str) -> bytes:
-    """
-    Synthesizes a warm, pleasant, instrumental-only music-box / đàn tranh WAV melody
-    for Christmas ('Jingle Bells') and Lunar New Year / Tết ('Ngày Tết Quê Em' pentatonic).
-    """
-    sr = 22050
-    note_hz = {
-        "REST": 0.0,
-        "G2": 98.00, "A2": 110.00, "C3": 130.81, "D3": 146.83, "E3": 164.81, "F3": 174.61, "G3": 196.00, "A3": 220.00,
-        "C4": 261.63, "D4": 293.66, "E4": 329.63, "F4": 349.23, "G4": 392.00, "A4": 440.00,
-        "C5": 523.25, "D5": 587.33, "E5": 659.25, "F5": 698.46, "G5": 783.99, "A5": 880.00, "C6": 1046.50,
-    }
-
-    if theme_key == "christmas":
-        # Jingle Bells Chorus — Warm Celesta / Music Box
-        beat = 0.27
-        melody = [
-            ("E5", 1, "C3"), ("E5", 1, "C3"), ("E5", 2, "C3"),
-            ("E5", 1, "C3"), ("E5", 1, "C3"), ("E5", 2, "C3"),
-            ("E5", 1, "C3"), ("G5", 1, "C3"), ("C5", 1.5, "C3"), ("D5", 0.5, "C3"), ("E5", 4, "C3"),
-            ("F5", 1, "F3"), ("F5", 1, "F3"), ("F5", 1.5, "F3"), ("F5", 0.5, "F3"),
-            ("F5", 1, "C3"), ("E5", 1, "C3"), ("E5", 1, "C3"), ("E5", 1, "C3"),
-            ("E5", 1, "G3"), ("D5", 1, "G3"), ("D5", 1, "G3"), ("E5", 1, "G3"), ("D5", 2, "G3"), ("G5", 2, "G3"),
-            ("E5", 1, "C3"), ("E5", 1, "C3"), ("E5", 2, "C3"),
-            ("E5", 1, "C3"), ("E5", 1, "C3"), ("E5", 2, "C3"),
-            ("E5", 1, "C3"), ("G5", 1, "C3"), ("C5", 1.5, "C3"), ("D5", 0.5, "C3"), ("E5", 4, "C3"),
-            ("F5", 1, "F3"), ("F5", 1, "F3"), ("F5", 1.5, "F3"), ("F5", 0.5, "F3"),
-            ("F5", 1, "C3"), ("E5", 1, "C3"), ("E5", 1, "C3"), ("E5", 1, "C3"),
-            ("G5", 1, "G3"), ("G5", 1, "G3"), ("F5", 1, "G3"), ("D5", 1, "G3"), ("C5", 4, "C3"),
-        ]
-        decay_rate = 3.2
-    else:
-        # Joyful Vietnamese Pentatonic Spring Melody ("Ngày Tết Quê Em" style) — Đàn Tranh / Music Box
-        beat = 0.28
-        melody = [
-            # "Tết, Tết, Tết, Tết đến rồi!"
-            ("G5", 0.5, "C3"), ("G5", 0.5, "C3"), ("G5", 0.5, "C3"), ("A5", 0.5, "C3"), ("G5", 0.5, "C3"), ("E5", 1.5, "C3"),
-            ("G5", 0.5, "G3"), ("G5", 0.5, "G3"), ("G5", 0.5, "G3"), ("A5", 0.5, "G3"), ("G5", 0.5, "G3"), ("E5", 1.5, "G3"),
-            # "Tết, Tết, Tết, Tết đến rồi, Tết đến trong tim mọi người"
-            ("G5", 0.5, "A2"), ("G5", 0.5, "A2"), ("G5", 0.5, "A2"), ("A5", 0.5, "A2"), ("C6", 1.0, "F3"),
-            ("A5", 0.5, "F3"), ("G5", 0.5, "G3"), ("E5", 0.5, "G3"), ("D5", 0.5, "G3"), ("C5", 2.0, "C3"),
-            # "Mừng ngày Tết trên khắp quê tôi"
-            ("C5", 0.5, "C3"), ("D5", 0.5, "C3"), ("E5", 0.5, "C3"), ("G5", 0.5, "C3"), ("E5", 0.5, "C3"), ("D5", 0.5, "C3"), ("C5", 1.0, "C3"),
-            # "Ngàn hoa thơm khoe sắc xinh tươi"
-            ("D5", 0.5, "G3"), ("E5", 0.5, "G3"), ("G5", 0.5, "G3"), ("A5", 0.5, "G3"), ("G5", 0.5, "G3"), ("E5", 0.5, "G3"), ("D5", 1.0, "G3"),
-            # "Đàn em thơ khoe áo mới, chạy tung tăng vui pháo hoa"
-            ("E5", 0.5, "A2"), ("G5", 0.5, "A2"), ("A5", 0.5, "F3"), ("C6", 1.0, "F3"),
-            ("A5", 0.5, "G3"), ("G5", 0.5, "G3"), ("E5", 0.5, "G3"), ("D5", 0.5, "G3"), ("C5", 2.5, "C3"),
-        ]
-        decay_rate = 4.2
-
-    chunks = []
-    for n_name, dur_beats, bass_name in melody:
-        n_samples = int(sr * dur_beats * beat)
-        t_arr = np.linspace(0.0, dur_beats * beat, n_samples, endpoint=False)
-        freq = note_hz.get(n_name, 0.0)
-        bass_f = note_hz.get(bass_name, 0.0)
-
-        attack = 1.0 - np.exp(-t_arr / 0.012)
-        env = attack * np.exp(-decay_rate * t_arr)
-        bass_env = attack * np.exp(-1.8 * t_arr)
-
-        sig = np.zeros(n_samples, dtype=np.float64)
-        if freq > 0:
-            sig += (
-                0.55 * np.sin(2.0 * np.pi * freq * t_arr)
-                + 0.22 * np.sin(2.0 * np.pi * (2.0 * freq) * t_arr)
-                + 0.08 * np.sin(2.0 * np.pi * (3.0 * freq) * t_arr)
-            ) * env
-        if bass_f > 0:
-            sig += (
-                0.20 * np.sin(2.0 * np.pi * bass_f * t_arr)
-                + 0.10 * np.sin(2.0 * np.pi * (1.5 * bass_f) * t_arr)
-            ) * bass_env
-
-        # Gentle fade at note end to prevent clicks
-        fade_len = min(120, n_samples // 4)
-        if fade_len > 0:
-            sig[-fade_len:] *= np.linspace(1.0, 0.0, fade_len)
-        chunks.append(sig)
-
-    full = np.concatenate(chunks)
-    peak = np.max(np.abs(full)) + 1e-9
-    pcm = np.int16((full / peak) * 18000)
-
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(sr)
-        wf.writeframes(pcm.tobytes())
-    return buf.getvalue()
+# Royalty-free online instrumental music (Creative Commons by Kevin MacLeod / Wikimedia Commons)
+HOLIDAY_MUSIC_URLS = {
+    "xmas": (
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Silent%20Night.mp3",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Silent_Night_(Kevin_MacLeod)_(ISRC_USUAN1100075).oga",
+    ),
+    "tet": (
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Shenyang.mp3",
+        "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Guzheng%20City.mp3",
+    ),
+}
 
 
 def inject_tet_theme():
-    """Injects a festive Vietnamese Lunar New Year (Tết) theme with falling hoa mai & hoa đào petals."""
+    """Injects a warm, lucky, high-contrast Lunar New Year (Tết) theme with falling apricot/peach blossoms."""
     petals_html = (
         "<div class='tet-petal-container' aria-hidden='true'>"
-        "<div class='tet-petal p1'>🌼</div>"
-        "<div class='tet-petal p2'>🌸</div>"
+        "<div class='tet-petal p1'>🌸</div>"
+        "<div class='tet-petal p2'>🌼</div>"
         "<div class='tet-petal p3'>🧧</div>"
-        "<div class='tet-petal p4'>🌼</div>"
+        "<div class='tet-petal p4'>🌸</div>"
         "<div class='tet-petal p5'>✨</div>"
-        "<div class='tet-petal p6'>🌸</div>"
-        "<div class='tet-petal p7'>🌼</div>"
-        "<div class='tet-petal p8'>🌸</div>"
-        "<div class='tet-petal p9'>🏮</div>"
-        "<div class='tet-petal p10'>🌼</div>"
-        "<div class='tet-petal p11'>✨</div>"
-        "<div class='tet-petal p12'>🌸</div>"
+        "<div class='tet-petal p6'>🌼</div>"
+        "<div class='tet-petal p7'>🌸</div>"
+        "<div class='tet-petal p8'>🌼</div>"
+        "<div class='tet-petal p9'>✨</div>"
+        "<div class='tet-petal p10'>🌸</div>"
+        "<div class='tet-petal p11'>🌼</div>"
+        "<div class='tet-petal p12'>🧧</div>"
         "</div>"
         "<div class='tet-lantern-bar' aria-hidden='true'>"
-        "<span class='t-lamp'>🏮</span><span class='t-lamp'>🌼</span><span class='t-lamp'>🧧</span><span class='t-lamp'>🌸</span>"
-        "<span class='t-lamp'>🏮</span><span class='t-lamp'>🌼</span><span class='t-lamp'>🧧</span><span class='t-lamp'>🌸</span>"
-        "<span class='t-lamp'>🏮</span><span class='t-lamp'>🌼</span><span class='t-lamp'>🧧</span><span class='t-lamp'>🌸</span>"
+        "<span class='tlantern'>🏮</span><span class='tlantern'>✨</span><span class='tlantern'>🏮</span><span class='tlantern'>✨</span>"
+        "<span class='tlantern'>🏮</span><span class='tlantern'>✨</span><span class='tlantern'>🏮</span><span class='tlantern'>✨</span>"
+        "<span class='tlantern'>🏮</span><span class='tlantern'>✨</span><span class='tlantern'>🏮</span>"
         "</div>"
     )
     tet_css = (
         "<style>"
+        "/* Warm Lucky Red & Golden Apricot Blossom Tết Background */"
         "html, body, .stApp, [data-testid='stAppViewContainer'], [data-testid='stHeader'], main {"
         "background: linear-gradient(180deg, #fffbeb 0%, #fff1f2 52%, #fef9c3 100%) !important;"
         "background-attachment: fixed !important;"
         "color: #1e293b !important;"
-        "accent-color: #dc2626 !important;"
+        "accent-color: #b91c1c !important;"
         "}"
         "section[data-testid='stSidebar'], section[data-testid='stSidebar'] > div {"
-        "background: linear-gradient(180deg, #fef2f2 0%, #fffbeb 55%, #fff7ed 100%) !important;"
+        "background: linear-gradient(180deg, #fef2f2 0%, #fffbeb 60%, #fff7ed 100%) !important;"
         "border-right: 2px solid #fcd34d !important;"
         "}"
         "section[data-testid='stSidebar'] div[role='radiogroup'] > label {"
@@ -948,15 +864,15 @@ def inject_tet_theme():
         "border-color: #f59e0b !important;"
         "}"
         "section[data-testid='stSidebar'] div[role='radiogroup'] > label:has(input:checked) {"
-        "background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;"
-        "border-color: #f59e0b !important;"
-        "box-shadow: 0 4px 12px rgba(220, 38, 38, 0.28) !important;"
+        "background: linear-gradient(135deg, #b91c1c 0%, #dc2626 70%, #d97706 100%) !important;"
+        "border-color: #991b1b !important;"
+        "box-shadow: 0 4px 12px rgba(185, 28, 28, 0.28) !important;"
         "}"
         "[data-testid='stVerticalBlockBorderWrapper'], div[data-testid='stForm'], .clean-card {"
         "background-color: rgba(255, 255, 255, 0.95) !important;"
         "border: 1.5px solid #fcd34d !important;"
         "border-radius: 18px !important;"
-        "box-shadow: 0 6px 18px rgba(217, 119, 6, 0.08), 0 2px 6px rgba(220, 38, 38, 0.05) !important;"
+        "box-shadow: 0 6px 18px rgba(185, 28, 28, 0.07), 0 2px 6px rgba(245, 158, 11, 0.08) !important;"
         "}"
         "div[data-testid='stMetric'] {"
         "background: linear-gradient(180deg, #ffffff 0%, #fffbeb 100%) !important;"
@@ -964,11 +880,14 @@ def inject_tet_theme():
         "border-radius: 14px !important;"
         "}"
         "div[data-testid='stFormSubmitButton'] > button, .stButton > button[kind='primary'] {"
-        "background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;"
-        "color: #ffffff !important;"
-        "border: 1.5px solid #facc15 !important;"
+        "background: linear-gradient(135deg, #dc2626 0%, #b91c1c 65%, #991b1b 100%) !important;"
+        "color: #fef08a !important;"
+        "border: 1.5px solid #fbbf24 !important;"
         "border-radius: 12px !important;"
-        "box-shadow: 0 5px 14px rgba(220, 38, 38, 0.28) !important;"
+        "box-shadow: 0 5px 14px rgba(185, 28, 28, 0.28) !important;"
+        "}"
+        "div[data-testid='stFormSubmitButton'] > button *, .stButton > button[kind='primary'] * {"
+        "color: #ffffff !important;"
         "}"
         "div[data-testid='stFormSubmitButton'] > button:hover, .stButton > button[kind='primary']:hover {"
         "background: linear-gradient(135deg, #b91c1c 0%, #d97706 100%) !important;"
@@ -980,28 +899,28 @@ def inject_tet_theme():
         "border-radius: 12px !important;"
         "}"
         ".stButton > button:hover {"
-        "background-color: #fef3c7 !important;"
+        "background-color: #fefce8 !important;"
         "border-color: #f59e0b !important;"
         "}"
         ".edu-warning-box {"
         "background: linear-gradient(135deg, #fffbeb 0%, #fef2f2 100%) !important;"
-        "border: 1.5px solid #fcd34d !important;"
+        "border: 1.5px solid #fbbf24 !important;"
         "border-left: 5px solid #dc2626 !important;"
         "color: #7f1d1d !important;"
         "}"
         ".tet-gold-strip {"
         "height: 6px; width: 100%; border-radius: 999px; margin-bottom: 10px;"
-        "background: repeating-linear-gradient(45deg, #dc2626, #dc2626 12px, #facc15 12px, #facc15 24px);"
+        "background: repeating-linear-gradient(45deg, #dc2626, #dc2626 12px, #fbbf24 12px, #fbbf24 22px, #ef4444 22px, #ef4444 34px, #fef08a 34px, #fef08a 44px);"
         "}"
         ".tet-lantern-bar {"
-        "position: fixed; top: 0; left: 0; width: 100%; height: 26px;"
-        "display: flex; justify-content: space-around; align-items: center;"
-        "pointer-events: none; z-index: 9998; font-size: 0.9rem; opacity: 0.88;"
+        "position: fixed; top: 0; left: 0; width: 100%; height: 24px;"
+        "display: flex; justify-content: space-around; align-items: flex-start;"
+        "pointer-events: none; z-index: 9998; font-size: 0.95rem;"
         "}"
-        ".t-lamp { display: inline-block; animation: tetSway 3s ease-in-out infinite; }"
-        "@keyframes tetSway {"
-        "  0%, 100% { transform: rotate(-6deg); }"
-        "  50% { transform: rotate(6deg); }"
+        ".tlantern { display: inline-block; animation: tetSwing 3.2s ease-in-out infinite; }"
+        "@keyframes tetSwing {"
+        "  0%, 100% { transform: rotate(-6deg); opacity: 0.92; }"
+        "  50% { transform: rotate(6deg); opacity: 0.65; }"
         "}"
         ".tet-petal-container {"
         "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;"
@@ -1009,30 +928,24 @@ def inject_tet_theme():
         "}"
         ".tet-petal {"
         "position: fixed; top: -10%; opacity: 0.78; user-select: none;"
-        "animation-name: tetFall, tetDrift;"
+        "animation-name: tetFall, tetSway;"
         "animation-timing-function: linear, ease-in-out;"
         "animation-iteration-count: infinite, infinite;"
         "}"
-        "@keyframes tetFall {"
-        "  0% { top: -8%; }"
-        "  100% { top: 105%; }"
-        "}"
-        "@keyframes tetDrift {"
-        "  0%, 100% { transform: translateX(0px) rotate(0deg); }"
-        "  50% { transform: translateX(26px) rotate(28deg); }"
-        "}"
-        ".p1 { left: 5%; font-size: 1.05rem; animation-duration: 11s, 3.6s; animation-delay: 0s, 0s; }"
-        ".p2 { left: 14%; font-size: 0.95rem; animation-duration: 13.5s, 4.1s; animation-delay: 2s, 0.8s; }"
-        ".p3 { left: 23%; font-size: 0.9rem; animation-duration: 15s, 4.4s; animation-delay: 4s, 1.2s; }"
-        ".p4 { left: 32%; font-size: 1.1rem; animation-duration: 12s, 3.8s; animation-delay: 1s, 1.8s; }"
-        ".p5 { left: 41%; font-size: 0.85rem; animation-duration: 10.5s, 3.2s; animation-delay: 5s, 0.3s; }"
-        ".p6 { left: 50%; font-size: 1.05rem; animation-duration: 13s, 4.0s; animation-delay: 3s, 1.5s; }"
-        ".p7 { left: 59%; font-size: 0.95rem; animation-duration: 11.5s, 3.5s; animation-delay: 6s, 0.9s; }"
-        ".p8 { left: 68%; font-size: 1.15rem; animation-duration: 14s, 4.3s; animation-delay: 2.2s, 1.1s; }"
-        ".p9 { left: 77%; font-size: 0.95rem; animation-duration: 15.5s, 4.6s; animation-delay: 0.6s, 2.0s; }"
-        ".p10 { left: 85%; font-size: 1.0rem; animation-duration: 12.2s, 3.7s; animation-delay: 4.2s, 0.5s; }"
-        ".p11 { left: 91%; font-size: 0.85rem; animation-duration: 10.8s, 3.3s; animation-delay: 1.7s, 1.4s; }"
-        ".p12 { left: 96%; font-size: 1.05rem; animation-duration: 13.2s, 4.0s; animation-delay: 3.1s, 0.7s; }"
+        "@keyframes tetFall { 0% { top: -8%; } 100% { top: 105%; } }"
+        "@keyframes tetSway { 0%, 100% { transform: translateX(0px) rotate(0deg); } 50% { transform: translateX(26px) rotate(24deg); } }"
+        ".p1 { left: 5%; font-size: 1.05rem; animation-duration: 12s, 3.6s; animation-delay: 0s, 0s; }"
+        ".p2 { left: 13%; font-size: 0.95rem; animation-duration: 14.5s, 4.1s; animation-delay: 2s, 1s; }"
+        ".p3 { left: 22%; font-size: 0.9rem; animation-duration: 13s, 3.9s; animation-delay: 4.5s, 0.5s; }"
+        ".p4 { left: 31%; font-size: 1.1rem; animation-duration: 15s, 4.4s; animation-delay: 1s, 1.8s; }"
+        ".p5 { left: 40%; font-size: 0.85rem; animation-duration: 10.8s, 3.1s; animation-delay: 5s, 0s; }"
+        ".p6 { left: 49%; font-size: 1.05rem; animation-duration: 13.8s, 4.0s; animation-delay: 3s, 1.4s; }"
+        ".p7 { left: 58%; font-size: 0.95rem; animation-duration: 12.2s, 3.5s; animation-delay: 6s, 0.7s; }"
+        ".p8 { left: 67%; font-size: 1.15rem; animation-duration: 14.2s, 4.3s; animation-delay: 2.3s, 1.1s; }"
+        ".p9 { left: 76%; font-size: 0.85rem; animation-duration: 11.5s, 3.4s; animation-delay: 0.8s, 2.0s; }"
+        ".p10 { left: 84%; font-size: 1.0rem; animation-duration: 15.2s, 4.5s; animation-delay: 4.2s, 0.4s; }"
+        ".p11 { left: 91%; font-size: 1.05rem; animation-duration: 11.6s, 3.3s; animation-delay: 1.7s, 1.5s; }"
+        ".p12 { left: 96%; font-size: 0.9rem; animation-duration: 13.4s, 4.1s; animation-delay: 3.6s, 0.9s; }"
         "</style>"
     )
     st.markdown(tet_css + petals_html, unsafe_allow_html=True)
@@ -1191,27 +1104,30 @@ def inject_christmas_theme():
 
 
 def render_sidebar_and_get_lang() -> tuple:
-    """Renders the translated EIU logo, smart language selector, holiday theme + instrumental music, and disclaimer."""
+    """Renders the translated EIU logo, language selector, holiday theme & music, and disclaimer in the sidebar."""
     if st.session_state.get("_sidebar_done", False):
-        lang_code = LANGUAGES[st.session_state.get("lang_choice", "🇬🇧 English")]
+        lang_code = LANGUAGES[st.session_state.get("lang_choice", "🇻🇳 Tiếng Việt")]
         return lang_code, TRANSLATIONS[lang_code]
 
     if "lang_choice" not in st.session_state:
         st.session_state["lang_choice"] = "🇻🇳 Tiếng Việt"
-    if "ui_theme" not in st.session_state:
-        st.session_state["ui_theme"] = "christmas"
-
-    cur_lang = LANGUAGES[st.session_state["lang_choice"]]
-    uni_title, uni_sub, _, lang_lbl, _ = LOGO_TEXT_I18N.get(cur_lang, LOGO_TEXT_I18N["en"])
+    if "active_theme" not in st.session_state:
+        st.session_state["active_theme"] = "xmas"
 
     # 1. EIU Logo Card at top of Sidebar (Translated!)
     logo_slot = st.sidebar.empty()
 
     # 2. Smart Compact Language Switcher
+    _cur_choice = st.session_state.get("_lang_select_widget", st.session_state["lang_choice"])
+    if _cur_choice not in LANGUAGES:
+        _cur_choice = "🇻🇳 Tiếng Việt"
+    cur_lang = LANGUAGES[_cur_choice]
+    _, _, _, lang_lbl, _ = LOGO_TEXT_I18N.get(cur_lang, LOGO_TEXT_I18N["en"])
+
     selected_label = st.sidebar.selectbox(
         lang_lbl,
         options=list(LANGUAGES.keys()),
-        index=list(LANGUAGES.keys()).index(st.session_state["lang_choice"]),
+        index=list(LANGUAGES.keys()).index(_cur_choice),
         key="_lang_select_widget",
     )
     st.session_state["lang_choice"] = selected_label
@@ -1220,22 +1136,49 @@ def render_sidebar_and_get_lang() -> tuple:
     uni_title, uni_sub, _, _, _ = LOGO_TEXT_I18N.get(lang_code, LOGO_TEXT_I18N["en"])
     th_cfg = THEME_I18N.get(lang_code, THEME_I18N["en"])
 
-    # 2b. Holiday Theme Selector (Christmas / Tết / Standard Medical)
-    theme_options = ["christmas", "tet", "medical"]
-    selected_theme = st.sidebar.selectbox(
+    # 2b. Holiday Theme Selector (Tết ONLY for Vietnamese & Chinese!)
+    if lang_code in ("vi", "zh"):
+        theme_options = ["xmas", "tet", "standard"]
+    else:
+        theme_options = ["xmas", "standard"]
+
+    if st.session_state["active_theme"] not in theme_options:
+        st.session_state["active_theme"] = "xmas"
+
+    theme_labels = {
+        "standard": th_cfg["opt_standard"],
+        "xmas": th_cfg["opt_xmas"],
+        "tet": th_cfg["opt_tet"],
+    }
+    chosen_theme = st.sidebar.selectbox(
         th_cfg["label"],
         options=theme_options,
-        index=theme_options.index(st.session_state["ui_theme"]),
-        format_func=lambda k: th_cfg[k],
-        key="_ui_theme_widget",
+        index=theme_options.index(st.session_state["active_theme"]),
+        format_func=lambda k: theme_labels[k],
+        key="_theme_select_widget",
     )
-    st.session_state["ui_theme"] = selected_theme
+    st.session_state["active_theme"] = chosen_theme
 
-    # 2c. Theme Styling + Instrumental Music Player for Holiday Themes
-    if selected_theme == "christmas":
+    # 2c. Holiday Instrumental Music Player (streamed online, no vocals)
+    if chosen_theme in ("xmas", "tet"):
+        m_primary, m_fallback = HOLIDAY_MUSIC_URLS[chosen_theme]
+        m_title = th_cfg["xmas_music"] if chosen_theme == "xmas" else th_cfg["tet_music"]
+        m_border = "#fecdd3" if chosen_theme == "xmas" else "#fcd34d"
+        m_bg = "#fff5f5" if chosen_theme == "xmas" else "#fffbeb"
+        m_color = "#b91c1c" if chosen_theme == "xmas" else "#92400e"
+        st.sidebar.markdown(
+            f"<div style='background:{m_bg}; border:1px solid {m_border}; border-radius:12px; padding:8px 10px; margin-bottom:10px;'>"
+            f"<div style='font-size:0.74rem; font-weight:700; color:{m_color}; margin-bottom:4px;'>{m_title}</div>"
+            f"<audio controls loop preload='none' style='width:100%; height:34px;'>"
+            f"<source src='{m_primary}' type='audio/mpeg'>"
+            f"<source src='{m_fallback}' type='audio/ogg'>"
+            f"</audio>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+    if chosen_theme == "xmas":
         inject_christmas_theme()
-        st.sidebar.caption(th_cfg["xmas_music"])
-        st.sidebar.audio(build_holiday_music_wav("christmas"), format="audio/wav", loop=True, autoplay=True)
         logo_slot.markdown(
             f"<div style='background:linear-gradient(180deg,#ffffff 0%,#fff5f5 100%); padding:12px 14px 12px 14px; "
             f"border-radius:16px; border:1.5px solid #fecdd3; text-align:center; margin-bottom:10px; "
@@ -1250,19 +1193,17 @@ def render_sidebar_and_get_lang() -> tuple:
             f"</div>",
             unsafe_allow_html=True,
         )
-    elif selected_theme == "tet":
+    elif chosen_theme == "tet":
         inject_tet_theme()
-        st.sidebar.caption(th_cfg["tet_music"])
-        st.sidebar.audio(build_holiday_music_wav("tet"), format="audio/wav", loop=True, autoplay=True)
         logo_slot.markdown(
             f"<div style='background:linear-gradient(180deg,#ffffff 0%,#fffbeb 100%); padding:12px 14px 12px 14px; "
             f"border-radius:16px; border:1.5px solid #fcd34d; text-align:center; margin-bottom:10px; "
-            f"box-shadow:0 4px 12px rgba(217,119,6,0.10);'>"
+            f"box-shadow:0 4px 12px rgba(185,28,28,0.09);'>"
             f"<div class='tet-gold-strip'></div>"
             f"<img src='data:image/png;base64,{EIU_LOGO_B64}' style='max-width:158px; height:auto; margin-bottom:6px;'/>"
             f"<div style='font-size:0.74rem; font-weight:800; color:#b91c1c; letter-spacing:0.3px; line-height:1.3;'>{uni_title}</div>"
             f"<div style='font-size:0.7rem; font-weight:600; color:#b45309; margin-top:2px;'>{uni_sub}</div>"
-            f"<div style='margin-top:8px; display:inline-block; background:#fef2f2; border:1px solid #fcd34d; "
+            f"<div style='margin-top:8px; display:inline-block; background:#fef2f2; border:1px solid #fbbf24; "
             f"color:#b91c1c; font-size:0.68rem; font-weight:700; padding:3px 9px; border-radius:999px;'>"
             f"{th_cfg['tet_side']}</div>"
             f"</div>",

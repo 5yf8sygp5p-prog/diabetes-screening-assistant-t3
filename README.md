@@ -1,5 +1,9 @@
 # Diabetes Screening Assistant (Topic T3: CDC BRFSS 2015)
 
+- **Live Web App (Streamlit Community Cloud):** https://diabetes-screening-assistant-t3-jew6ba9ep8wvmpwr5ryvch.streamlit.app
+- **Public GitHub Repository:** https://github.com/5yf8sygp5p-prog/diabetes-screening-assistant-t3
+- **3-Minute Demo Video:** *(Attach your recorded YouTube / Google Drive demo link here before final submission — see Section 8 for the full user-decision walkthrough script)*
+
 > ⚠️ **Disclaimer:** *Educational project — not for clinical use. Results describe statistical patterns in a 2015 US telephone health survey and are not medical advice.*
 
 ---

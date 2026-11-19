@@ -1252,19 +1252,33 @@ def load_artifacts():
     pipeline_path = find_file("models", "pipeline.joblib")
     baseline_path = find_file("models", "baseline_logreg.joblib")
 
-    with open(meta_path, "r", encoding="utf-8") as f:
-        meta = json.load(f)
+    try:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError) as exc:
+        st.error(
+            f"⚠️ Could not load model metadata (`models/model_meta.json`). "
+            f"Please ensure `models/model_meta.json` is uploaded or run `python train.py`. ({exc})"
+        )
+        st.stop()
 
     main_pipe = None
     base_pipe = None
     try:
         import joblib
-        if inydb_path.exists():
-            main_pipe = joblib.load(inydb_path)
-        elif pipeline_path.exists():
-            main_pipe = joblib.load(pipeline_path)
-        if baseline_path.exists():
-            base_pipe = joblib.load(baseline_path)
+        try:
+            if pipeline_path.exists():
+                main_pipe = joblib.load(pipeline_path)
+            elif inydb_path.exists():
+                main_pipe = joblib.load(inydb_path)
+        except Exception:
+            main_pipe = None
+
+        try:
+            if baseline_path.exists():
+                base_pipe = joblib.load(baseline_path)
+        except Exception:
+            base_pipe = None
     except Exception:
         main_pipe = None
         base_pipe = None
@@ -1277,7 +1291,7 @@ def score_single_case(input_df: pd.DataFrame, main_pipe, base_pipe, meta: dict):
     weights = ref["feature_weights"]
     means = ref["feature_means"]
     stds = ref["feature_stds"]
-    intercept = ref["logreg_intercept"]
+    intercept = float(ref["logreg_intercept"])
 
     row = input_df.iloc[0]
     contributions = {}
@@ -1285,26 +1299,34 @@ def score_single_case(input_df: pd.DataFrame, main_pipe, base_pipe, meta: dict):
     for feat, w in weights.items():
         val = float(row[feat])
         if feat in ["BMI", "Age", "GenHlth"]:
-            standardized_diff = (val - means[feat]) / stds[feat]
+            standardized_diff = (val - float(means[feat])) / max(float(stds[feat]), 1e-6)
         else:
-            standardized_diff = val - means[feat]
-        contrib = w * standardized_diff
+            standardized_diff = val - float(means[feat])
+        contrib = float(w) * standardized_diff
         contributions[feat] = contrib
         z_linear += contrib
 
-    prob_lr = float(1.0 / (1.0 + np.exp(-z_linear)))
+    z_safe = float(np.clip(z_linear, -30.0, 30.0))
+    prob_lr = float(1.0 / (1.0 + np.exp(-z_safe)))
     synergy = 0.0
-    if row["HighBP"] == 1 and row["HighChol"] == 1 and row["BMI"] >= 28.0:
+    if row["HighBP"] == 1 and row["HighChol"] == 1 and float(row["BMI"]) >= 28.0:
         synergy += 0.22
-    if row["Age"] >= 8 and row["GenHlth"] >= 3:
+    if float(row["Age"]) >= 8 and float(row["GenHlth"]) >= 3:
         synergy += 0.14
-    prob_gb = float(1.0 / (1.0 + np.exp(-(z_linear + synergy))))
+    prob_gb = float(1.0 / (1.0 + np.exp(-float(np.clip(z_safe + synergy, -30.0, 30.0)))))
 
-    if main_pipe is not None and base_pipe is not None:
+    # Prioritize direct scikit-learn pipeline output independently for each loaded model
+    if main_pipe is not None:
         try:
             prob_gb = float(main_pipe.predict_proba(input_df)[0, 1])
+        except Exception:
+            pass
+    if base_pipe is not None:
+        try:
             prob_lr = float(base_pipe.predict_proba(input_df)[0, 1])
         except Exception:
             pass
 
+    prob_gb = float(np.clip(prob_gb, 0.0, 1.0))
+    prob_lr = float(np.clip(prob_lr, 0.0, 1.0))
     return prob_gb, prob_lr, contributions

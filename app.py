@@ -40,7 +40,7 @@ def score_single_case(input_df: pd.DataFrame, main_pipe, base_pipe, meta: dict):
     weights = ref["feature_weights"]
     means = ref["feature_means"]
     stds = ref["feature_stds"]
-    intercept = ref["logreg_intercept"]
+    intercept = float(ref["logreg_intercept"])
 
     row = input_df.iloc[0]
     contributions = {}
@@ -48,28 +48,36 @@ def score_single_case(input_df: pd.DataFrame, main_pipe, base_pipe, meta: dict):
     for feat, w in weights.items():
         val = float(row[feat])
         if feat in ["BMI", "Age", "GenHlth"]:
-            standardized_diff = (val - means[feat]) / stds[feat]
+            standardized_diff = (val - float(means[feat])) / max(float(stds[feat]), 1e-6)
         else:
-            standardized_diff = val - means[feat]
-        contrib = w * standardized_diff
+            standardized_diff = val - float(means[feat])
+        contrib = float(w) * standardized_diff
         contributions[feat] = contrib
         z_linear += contrib
 
-    prob_lr = float(1.0 / (1.0 + np.exp(-z_linear)))
+    z_safe = float(np.clip(z_linear, -30.0, 30.0))
+    prob_lr = float(1.0 / (1.0 + np.exp(-z_safe)))
     synergy = 0.0
-    if row["HighBP"] == 1 and row["HighChol"] == 1 and row["BMI"] >= 28.0:
+    if row["HighBP"] == 1 and row["HighChol"] == 1 and float(row["BMI"]) >= 28.0:
         synergy += 0.22
-    if row["Age"] >= 8 and row["GenHlth"] >= 3:
+    if float(row["Age"]) >= 8 and float(row["GenHlth"]) >= 3:
         synergy += 0.14
-    prob_gb = float(1.0 / (1.0 + np.exp(-(z_linear + synergy))))
+    prob_gb = float(1.0 / (1.0 + np.exp(-float(np.clip(z_safe + synergy, -30.0, 30.0)))))
 
-    if main_pipe is not None and base_pipe is not None:
+    # Prioritize direct scikit-learn pipeline predictions independently for each loaded model
+    if main_pipe is not None:
         try:
             prob_gb = float(main_pipe.predict_proba(input_df)[0, 1])
+        except Exception:
+            pass
+    if base_pipe is not None:
+        try:
             prob_lr = float(base_pipe.predict_proba(input_df)[0, 1])
         except Exception:
             pass
 
+    prob_gb = float(np.clip(prob_gb, 0.0, 1.0))
+    prob_lr = float(np.clip(prob_lr, 0.0, 1.0))
     return prob_gb, prob_lr, contributions
 
 
@@ -359,13 +367,28 @@ with st.form("screening_assistant_form"):
 # ==============================================================================
 # 3. COMPUTE SCORE & TRIGGER ANIMATED ACTIONS WHEN ANALYZED
 # ==============================================================================
-active_th = float(st.session_state.get("active_threshold", 0.18))
+active_th = float(st.session_state.get("active_threshold", default_th))
 pt_now = min(curve_list, key=lambda r: abs(r["threshold"] - active_th))
 rec_now = float(pt_now["test_recall"])
 prec_now = float(pt_now["test_precision"])
 f2_now = (5 * prec_now * rec_now / (4 * prec_now + rec_now)) if (4 * prec_now + rec_now) > 0 else 0.0
+_app_metrics = meta.get("app_model_test_metrics", {})
+pr_auc_live = float(_app_metrics.get("pr_auc_test", 0.418))
+roc_auc_live = float(_app_metrics.get("roc_auc_test", 0.822))
+cost_fp_live = float(meta.get("cost_assumptions", {}).get("cost_false_positive_usd", 45.0))
 
-bmi_val = round(float(weight_kg) / ((float(height_cm) / 100.0) ** 2), 1)
+safe_height_m = max(0.5, float(height_cm) / 100.0)
+safe_weight_kg = max(10.0, float(weight_kg))
+raw_bmi = round(safe_weight_kg / (safe_height_m ** 2), 1)
+bmi_val = float(np.clip(raw_bmi, 12.0, 70.0))
+if raw_bmi < 12.0 or raw_bmi > 65.0:
+    _bmi_warn = {
+        "vi": f"⚠️ Chiều cao ({height_cm} cm) và cân nặng ({weight_kg} kg) cho ra BMI cực trị ({raw_bmi:.1f} kg/m²). Hệ thống tự động giới hạn trong ngưỡng hợp lệ ({bmi_val:.1f}) để đảm bảo mô hình chạy ổn định — vui lòng kiểm tra lại số đo nhé.",
+        "en": f"⚠️ Extreme height ({height_cm} cm) / weight ({weight_kg} kg) gave BMI {raw_bmi:.1f} kg/m². Clamped safely to {bmi_val:.1f} for stable prediction — please double-check your entries.",
+        "zh": f"⚠️ 输入的身高 ({height_cm} cm) 与体重 ({weight_kg} kg) 计算出极端 BMI ({raw_bmi:.1f})，系统已安全限制为 {bmi_val:.1f}，请核对输入数值。",
+        "fr": f"⚠️ Taille ({height_cm} cm) / poids ({weight_kg} kg) extrêmes (IMC {raw_bmi:.1f}). Valeur bornée à {bmi_val:.1f} pour la stabilité — vérifiez vos mesures.",
+    }
+    st.warning(_bmi_warn.get(lang_code, _bmi_warn["en"]))
 lower_bmi = max(18.5, round(bmi_val - 2.0, 1))
 
 input_df = pd.DataFrame(
@@ -946,18 +969,19 @@ def generate_doctor_replies(question_text: str, use_live_llm: bool = True) -> tu
     if lang_code == "vi":
         if any(w in q for w in ["recall", "precision", "f2", "pr-auc"]):
             ans_m = (
-                f"Trong bài toán tầm soát tiểu đường tại nhà, <b>Recall (Độ nhạy = {rec_now:.1%}) quan trọng hơn nhiều so với Precision ({prec_now:.1%})!</b> "
-                f"Vì báo động giả chỉ tốn ~45$ xét nghiệm máu kiểm tra, còn bỏ sót bệnh gây biến chứng nặng. Chỉ số tối ưu nhất là "
-                f"<b>F2-Score ({f2_now:.3f} — coi trọng Recall gấp 2 lần Precision)</b> và <b>PR-AUC (0.418)</b>."
+                f"Trong bài toán tầm soát tiểu đường tại nhà (ngưỡng hiện tại <b>{active_th:.2f}</b>), "
+                f"<b>Recall (Độ nhạy = {rec_now:.1%}) quan trọng hơn nhiều so với Precision ({prec_now:.1%})!</b> "
+                f"Vì báo động giả chỉ tốn khoảng ~${cost_fp_live:.0f} xét nghiệm máu kiểm tra, còn bỏ sót bệnh gây biến chứng nặng. "
+                f"Chỉ số tối ưu là <b>F2-Score ({f2_now:.3f})</b>, <b>PR-AUC ({pr_auc_live:.3f})</b> và <b>ROC-AUC ({roc_auc_live:.3f})</b>."
             )
             ans_f = (
                 "Bạn có thể tự kéo thử tỷ lệ chi phí trên trang <b>Ngưỡng cắt & Chi phí</b> ở thanh menu bên trái để xem Recall và F2-Score thay đổi trực quan nhé!"
             )
             return ans_m, ans_f
-        if any(w in q for w in ["xét nghiệm máu nào", "yêu cầu xét nghiệm", "fpg", "hba1c"]):
+        if any(w in q for w in ["xét nghiệm máu nào", "yêu cầu xét nghiệm", "xét nghiệm gì", "fpg", "hba1c"]):
             ans_m = (
                 f"Bạn nên yêu cầu bác sĩ làm <b>Xét nghiệm đường huyết lúc đói (FPG — nhịn ăn 8 tiếng)</b> hoặc <b>HbA1c</b> "
-                f"(đánh giá đường huyết trung bình 3 tháng). Với điểm số <b>{prob_gb:.1%}</b> của bạn, đây là cách kiểm tra chính xác nhất!"
+                f"(đánh giá đường huyết trung bình 3 tháng). Với điểm số <b>{prob_gb:.1%}</b> của bạn (ngưỡng cắt <b>{active_th:.2f}</b>), đây là cách kiểm tra chính xác nhất!"
             )
             ans_f = "Tối hôm trước ngày đi lấy máu FPG bạn nhớ nhịn ăn từ 22h đêm (chỉ uống nước lọc) và ngủ sớm để kết quả chuẩn nhất nhé!"
             return ans_m, ans_f

@@ -152,10 +152,10 @@ _LOGO_I18N = getattr(
     i18n,
     "LOGO_TEXT_I18N",
     {
-        "en": ("EASTERN INTERNATIONAL UNIVERSITY", "Becamex Business School • Topic T3", "🏛️ Eastern International University (EIU) • Healthcare Decision-Support System", "🌐 Display Language", "📌 Menu Navigation"),
-        "vi": ("ĐẠI HỌC QUỐC TẾ MIỀN ĐÔNG (EIU)", "Trường Kinh doanh Becamex • Đề tài T3", "🏛️ Đại học Quốc tế Miền Đông (EIU) • Hệ thống Hỗ trợ Quyết định Y tế", "🌐 Ngôn ngữ hiển thị", "📌 Danh mục Trang"),
-        "zh": ("东方国际大学 (EIU)", "Becamex 商学院 • 课题 T3", "🏛️ 东方国际大学 (EIU) • 医疗决策支持系统", "🌐 显示语言", "📌 页面导航"),
-        "fr": ("UNIVERSITÉ INTERNATIONALE DE L'EST", "École de Commerce Becamex • Sujet T3", "🏛️ Université Internationale de l'Est (EIU) • Système d'Aide à la Décision", "🌐 Langue d'affichage", "📌 Navigation"),
+        "en": ("EASTERN INTERNATIONAL UNIVERSITY", "Becamex Business School", "🏛️ Eastern International University (EIU) • Healthcare Decision-Support System", "🌐 Display Language", "📌 Menu Navigation"),
+        "vi": ("ĐẠI HỌC QUỐC TẾ MIỀN ĐÔNG (EIU)", "Trường Kinh doanh Becamex", "🏛️ Đại học Quốc tế Miền Đông (EIU) • Hệ thống Hỗ trợ Quyết định Y tế", "🌐 Ngôn ngữ hiển thị", "📌 Danh mục Trang"),
+        "zh": ("东方国际大学 (EIU)", "Becamex 商学院", "🏛️ 东方国际大学 (EIU) • 医疗决策支持系统", "🌐 显示语言", "📌 页面导航"),
+        "fr": ("UNIVERSITÉ INTERNATIONALE DE L'EST", "École de Commerce Becamex", "🏛️ Université Internationale de l'Est (EIU) • Système d'Aide à la Décision", "🌐 Langue d'affichage", "📌 Navigation"),
     },
 )
 _NAV_I18N = getattr(
@@ -212,12 +212,11 @@ if "active_threshold" not in st.session_state:
 # ==============================================================================
 # 1. HEADER SECTION WITH TRANSLATED EIU UNIVERSITY BANNER
 # ==============================================================================
-if st.session_state.get("xmas_theme", True):
-    _xmas_i18n = getattr(i18n, "XMAS_I18N", {})
-    _, _, _xmas_banner_msg = _xmas_i18n.get(
-        lang_code,
-        ("", "", "✨ Merry Christmas • Wishing you a warm & healthy holiday season! 🎁"),
-    )
+_cur_theme = st.session_state.get("ui_theme", "christmas")
+_th_i18n = getattr(i18n, "THEME_I18N", {}).get(lang_code, {})
+
+if _cur_theme == "christmas":
+    _xmas_banner_msg = _th_i18n.get("xmas_banner", "✨ Merry Christmas • Wishing you a warm & healthy holiday season! 🎁")
     header_html = (
         "<div style='background:linear-gradient(135deg, #ffffff 0%, #fff1f2 55%, #ecfdf5 100%); "
         "border:1.5px solid #fecdd3; border-radius:18px; padding:16px 26px 18px 26px; margin-bottom:14px; "
@@ -241,6 +240,31 @@ if st.session_state.get("xmas_theme", True):
         "</div>"
         "</div>"
     )
+elif _cur_theme == "tet":
+    _tet_banner_msg = _th_i18n.get("tet_banner", "🏮 Happy Lunar New Year • Wishing you health, joy & prosperity! 🌸")
+    header_html = (
+        "<div style='background:linear-gradient(135deg, #ffffff 0%, #fffbeb 55%, #fef2f2 100%); "
+        "border:1.5px solid #fcd34d; border-radius:18px; padding:16px 26px 18px 26px; margin-bottom:14px; "
+        "box-shadow:0 6px 18px rgba(217,119,6,0.10);'>"
+        "<div class='tet-gold-strip'></div>"
+        "<div style='display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;'>"
+        "<div style='flex:1; min-width:280px;'>"
+        "<div style='display:inline-block; background:#fef2f2; border:1px solid #fcd34d; color:#b91c1c; "
+        "font-size:0.76rem; font-weight:700; padding:3px 11px; border-radius:999px; margin-bottom:7px;'>"
+        f"{_tet_banner_msg}"
+        "</div>"
+        f"<div style='font-size:0.78rem; font-weight:700; color:#b45309; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;'>"
+        f"🏮 {_header_badge_txt}"
+        "</div>"
+        f"<h1 style='font-size:2.05rem; font-weight:800; color:#991b1b; margin:0;'>🧧 {t['app_title']} 🌸</h1>"
+        "</div>"
+        "<div style='text-align:right;'>"
+        f"<img src='data:image/png;base64,{EIU_LOGO_B64}' style='max-height:60px; width:auto;'/>"
+        "<div style='font-size:1.15rem; margin-top:4px; letter-spacing:4px;'>🏮🌼🧧🌸✨</div>"
+        "</div>"
+        "</div>"
+        "</div>"
+    )
 else:
     header_html = (
         "<div style='display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; "
@@ -256,7 +280,6 @@ else:
         "</div>"
     )
 st.markdown(header_html, unsafe_allow_html=True)
-st.markdown(f"**{t['who_for_bold']}** {t['who_for_text']}")
 st.caption(t["app_caption"])
 
 GENHLTH_MAP = {
@@ -395,7 +418,7 @@ DOC_TEXT = {
         "m_safe": f"Tin vui! Điểm rủi ro của bạn chỉ là <b>{prob_gb:.1%}</b> (thấp hơn ngưỡng cảnh báo <b>{active_th:.2f}</b>). Bạn chưa cần xét nghiệm khẩn cấp hôm nay, chỉ cần duy trì khám sức khỏe định kỳ.",
         "f_flag": f"BMI hiện tại của bạn là <b>{bmi_val:.1f} kg/m²</b>. Nếu bạn giảm nhẹ BMI xuống <b>{lower_bmi:.1f} kg/m²</b> kết hợp đi bộ 30 phút/ngày, điểm rủi ro sẽ giảm xuống còn <b>{prob_whatif:.1%}</b>!",
         "f_safe": f"BMI của bạn là <b>{bmi_val:.1f} kg/m²</b>. Để giữ mức rủi ro thấp (<b>{prob_whatif:.1%}</b>), nhớ ăn nhiều rau xanh, bớt trà sữa full topping và ngủ đủ giấc nha!",
-        "chat_header": "💬 Chat Trực Tiếp Cùng AI BS. Minh Quân & BS. Thảo Vy (Trả lời mọi câu hỏi + Giọng nói Nam/Nữ!)",
+        "chat_header": "💬 Chat Trực Tiếp Cùng AI BS. Minh Quân & BS. Thảo Vy",
         "choose_doc": "Chọn bác sĩ bạn muốn tương tác:",
         "opt_both": "👨‍⚕️👩‍⚕️ Cả 2 Bác sĩ (Minh Quân & Thảo Vy)",
         "opt_male": "👨‍⚕️ Chỉ hỏi BS. Minh Quân",
@@ -420,7 +443,7 @@ DOC_TEXT = {
         "m_safe": f"Good news! Your estimated score is <b>{prob_gb:.1%}</b> (below our <b>{active_th:.2f}</b> cutoff). No urgent lab test is flagged today.",
         "f_flag": f"Your BMI is <b>{bmi_val:.1f} kg/m²</b>. Lowering your BMI toward <b>{lower_bmi:.1f} kg/m²</b> with 30 minutes of daily walking reduces your risk score to <b>{prob_whatif:.1%}</b>!",
         "f_safe": f"Your BMI is <b>{bmi_val:.1f} kg/m²</b>. Keep enjoying balanced meals and daily activity to maintain a low risk of <b>{prob_whatif:.1%}</b>!",
-        "chat_header": "💬 Live AI Chat with Dr. Ethan Brooks & Dr. Clara Bennett (Answers Any Question + Voice!)",
+        "chat_header": "💬 Live AI Chat with Dr. Ethan Brooks & Dr. Clara Bennett",
         "choose_doc": "Choose which doctor to talk to:",
         "opt_both": "👨‍⚕️👩‍⚕️ Both Doctors (Ethan Brooks & Clara Bennett)",
         "opt_male": "👨‍⚕️ Dr. Ethan Brooks Only",
@@ -445,7 +468,7 @@ DOC_TEXT = {
         "m_safe": f"好消息！您的风险得分为 <b>{prob_gb:.1%}</b>，低于阈值 <b>{active_th:.2f}</b>。目前无需紧急检测。",
         "f_flag": f"您的 BMI 为 <b>{bmi_val:.1f} kg/m²</b>。若将 BMI 降至 <b>{lower_bmi:.1f} kg/m²</b>，风险将降至 <b>{prob_whatif:.1%}</b>！",
         "f_safe": f"您的 BMI 为 <b>{bmi_val:.1f} kg/m²</b>。请继续保持均衡饮食与适度运动！",
-        "chat_header": "💬 与林明轩医生和苏婉清医生 AI 实时对话（支持任何话题 + 男女语音！）",
+        "chat_header": "💬 与林明轩医生和苏婉清医生 AI 实时对话",
         "choose_doc": "选择咨询对象：",
         "opt_both": "👨‍⚕️👩‍⚕️ 两位医生联合解答",
         "opt_male": "👨‍⚕️ 仅问林明轩医生",
@@ -470,7 +493,7 @@ DOC_TEXT = {
         "m_safe": f"Bonne nouvelle ! Votre score est de <b>{prob_gb:.1%}</b> (sous le seuil <b>{active_th:.2f}</b>). Aucun test urgent requis.",
         "f_flag": f"Votre IMC est de <b>{bmi_val:.1f} kg/m²</b>. En le réduisant vers <b>{lower_bmi:.1f} kg/m²</b>, votre score baisserait à <b>{prob_whatif:.1%}</b> !",
         "f_safe": f"Votre IMC est de <b>{bmi_val:.1f} kg/m²</b>. Continuez vos bonnes habitudes !",
-        "chat_header": "💬 Chat IA en Direct avec Dr Julien Moreau & Dr Camille Laurent (Toutes questions + Voix !)",
+        "chat_header": "💬 Chat IA en Direct avec Dr Julien Moreau & Dr Camille Laurent",
         "choose_doc": "Choisissez votre médecin :",
         "opt_both": "👨‍⚕️👩‍⚕️ Les 2 médecins ensemble",
         "opt_male": "👨‍⚕️ Dr Julien Moreau uniquement",
@@ -650,33 +673,23 @@ AUDIO_BTN_LABELS = {
     "vi": (
         "🔊 Nghe BS. Minh Quân nói",
         "🔊 Nghe BS. Thảo Vy nói",
-        "💓 Âm thanh Nhịp Tim & Quét AI",
-        "🎵 Bấm để nghe Giọng nói Nam/Nữ & Âm thanh Y tế:",
     ),
     "en": (
         "🔊 Hear Dr. Ethan Brooks",
         "🔊 Hear Dr. Clara Bennett",
-        "💓 Hospital ECG & Scan Sound",
-        "🎵 Click to Hear Male/Female AI Voiceover & Medical SFX:",
     ),
     "zh": (
         "🔊 收听林明轩医生语音",
         "🔊 收听苏婉清医生语音",
-        "💓 播放心电监护音效",
-        "🎵 点击收听男女 AI 语音播报与医疗音效：",
     ),
     "fr": (
         "🔊 Écouter Dr Julien Moreau",
         "🔊 Écouter Dr Camille Laurent",
-        "💓 Effet Sonore ECG & Scan",
-        "🎵 Cliquez pour écouter les voix IA et sons médicaux :",
     ),
 }
-btn_m_lbl, btn_f_lbl, btn_sfx_lbl, audio_bar_lbl = AUDIO_BTN_LABELS.get(lang_code, AUDIO_BTN_LABELS["en"])
+btn_m_lbl, btn_f_lbl = AUDIO_BTN_LABELS.get(lang_code, AUDIO_BTN_LABELS["en"])
 
-st.caption(audio_bar_lbl)
-
-au_c1, au_c2, au_c3 = st.columns(3)
+au_c1, au_c2 = st.columns(2)
 if au_c1.button(btn_m_lbl, key="btn_voice_m_top", use_container_width=True):
     st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
         clean_m_voice, lang_code, gender="male"
@@ -685,9 +698,6 @@ if au_c2.button(btn_f_lbl, key="btn_voice_f_top", use_container_width=True):
     st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
         clean_f_voice, lang_code, gender="female"
     )
-if au_c3.button(btn_sfx_lbl, key="btn_sfx_top", use_container_width=True):
-    st.session_state["active_audio_bytes"] = build_medical_ecg_wav()
-    st.session_state["active_audio_fmt"] = "audio/wav"
 
 if st.session_state.get("active_audio_bytes"):
     st.audio(
@@ -1023,7 +1033,6 @@ with st.container(border=True):
         horizontal=True,
     )
 
-    st.caption(d_cfg["quick_q_label"])
     if "active_question" not in st.session_state:
         st.session_state["active_question"] = d_cfg["q1"]
 

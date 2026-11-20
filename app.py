@@ -84,8 +84,8 @@ def score_single_case(input_df: pd.DataFrame, main_pipe, base_pipe, meta: dict):
 i18n.score_single_case = score_single_case
 
 st.set_page_config(
-    page_title="Diabetes Screening Assistant | EIU",
-    page_icon="🎄",
+    page_title="Diabetes Screening Assistant",
+    page_icon="🩺",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -700,22 +700,26 @@ AUDIO_BTN_LABELS = {
 }
 btn_m_lbl, btn_f_lbl = AUDIO_BTN_LABELS.get(lang_code, AUDIO_BTN_LABELS["en"])
 
-au_c1, au_c2 = st.columns(2)
-if au_c1.button(btn_m_lbl, key="btn_voice_m_top", use_container_width=True):
-    st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
-        clean_m_voice, lang_code, gender="male"
-    )
-if au_c2.button(btn_f_lbl, key="btn_voice_f_top", use_container_width=True):
-    st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
-        clean_f_voice, lang_code, gender="female"
-    )
+@st.fragment
+def render_top_voice_bar(_clean_m: str, _clean_f: str, _lang: str, _lbl_m: str, _lbl_f: str):
+    au_c1, au_c2 = st.columns(2)
+    if au_c1.button(_lbl_m, key="btn_voice_m_top", use_container_width=True):
+        st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
+            _clean_m, _lang, gender="male"
+        )
+    if au_c2.button(_lbl_f, key="btn_voice_f_top", use_container_width=True):
+        st.session_state["active_audio_bytes"], st.session_state["active_audio_fmt"] = synthesize_voice_mp3(
+            _clean_f, _lang, gender="female"
+        )
+    if st.session_state.get("active_audio_bytes"):
+        st.audio(
+            st.session_state["active_audio_bytes"],
+            format=st.session_state.get("active_audio_fmt", "audio/mp3"),
+            autoplay=True,
+        )
 
-if st.session_state.get("active_audio_bytes"):
-    st.audio(
-        st.session_state["active_audio_bytes"],
-        format=st.session_state.get("active_audio_fmt", "audio/mp3"),
-        autoplay=True,
-    )
+
+render_top_voice_bar(clean_m_voice, clean_f_voice, lang_code, btn_m_lbl, btn_f_lbl)
 
 if not has_run:
     st.info(t["prompt_analyze"])
@@ -727,10 +731,11 @@ if not has_run:
 @st.cache_data(show_spinner=False, ttl=180)
 def fetch_internet_knowledge(query: str, lang_key: str) -> str:
     """Fetches live real-time news (Google News RSS), DuckDuckGo, and Wikipedia facts."""
+    import concurrent.futures
+    import html as _html
     import urllib.parse
     import xml.etree.ElementTree as ET
 
-    snippets = []
     q_low = query.lower()
     news_cfg = {
         "vi": ("vi", "VN", "VN:vi"),
@@ -739,59 +744,48 @@ def fetch_internet_knowledge(query: str, lang_key: str) -> str:
         "fr": ("fr", "FR", "FR:fr"),
     }
     hl, gl, ceid = news_cfg.get(lang_key, ("en-US", "US", "US:en"))
-
-    # 0. DuckDuckGo HTML Web Search (Real Google-like organic web snippets for ANY topic!)
-    try:
-        import html as _html
-        ddg_html_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
-        req_ddg = urllib.request.Request(
-            ddg_html_url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                "Accept-Language": f"{hl},en;q=0.8",
-            },
-        )
-        with urllib.request.urlopen(req_ddg, timeout=5) as resp_ddg:
-            raw_html = resp_ddg.read().decode("utf-8", errors="ignore")
-            raw_snips = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', raw_html, flags=re.S)
-            cleaned_snips = []
-            for s in raw_snips[:4]:
-                clean_s = _html.unescape(re.sub(r"<[^>]+>", "", s)).strip()
-                clean_s = re.sub(r"\s+", " ", clean_s)
-                if clean_s and len(clean_s) > 25:
-                    cleaned_snips.append(clean_s)
-            if cleaned_snips:
-                snippets.append("[Kết quả tìm kiếm Web]: " + " | ".join(cleaned_snips))
-    except Exception:
-        pass
-
-    # 1. Google News RSS (Live real-time news, gold price, weather, sports, events!)
-    try:
-        rss_url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}&hl={hl}&gl={gl}&ceid={ceid}"
-        req_rss = urllib.request.Request(rss_url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req_rss, timeout=4) as resp_rss:
-            root = ET.fromstring(resp_rss.read())
-            headlines = [it.find("title").text for it in root.findall(".//item")[:4] if it.find("title") is not None]
-            if headlines:
-                snippets.append("[Tin tức / Dữ liệu thời gian thực]: " + " | ".join(headlines))
-    except Exception:
-        pass
-
-    # 2. DuckDuckGo Instant Answer
-    try:
-        ddg_url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1"
-        req3 = urllib.request.Request(ddg_url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req3, timeout=4) as resp3:
-            ddata = json.loads(resp3.read().decode("utf-8"))
-            abs_txt = ddata.get("AbstractText", "").strip()
-            if abs_txt:
-                snippets.append(f"[Web Summary]: {abs_txt[:420]}")
-    except Exception:
-        pass
-
-    # 3. Wikipedia for encyclopedic / knowledge queries
     is_realtime = any(w in q_low for w in ["hôm nay", "giá", "today", "price", "weather", "thời tiết", "tỷ giá", "mấy giờ", "news", "tin tức", "xổ số", "kết quả"])
-    if not is_realtime:
+
+    def _fetch_ddg():
+        try:
+            ddg_html_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+            req_ddg = urllib.request.Request(
+                ddg_html_url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                    "Accept-Language": f"{hl},en;q=0.8",
+                },
+            )
+            with urllib.request.urlopen(req_ddg, timeout=2.5) as resp_ddg:
+                raw_html = resp_ddg.read().decode("utf-8", errors="ignore")
+                raw_snips = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', raw_html, flags=re.S)
+                cleaned = [
+                    re.sub(r"\s+", " ", _html.unescape(re.sub(r"<[^>]+>", "", s))).strip()
+                    for s in raw_snips[:3]
+                ]
+                cleaned = [c for c in cleaned if len(c) > 25]
+                if cleaned:
+                    return "[Kết quả tìm kiếm Web]: " + " | ".join(cleaned)
+        except Exception:
+            return ""
+        return ""
+
+    def _fetch_news():
+        try:
+            rss_url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}&hl={hl}&gl={gl}&ceid={ceid}"
+            req_rss = urllib.request.Request(rss_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req_rss, timeout=2.5) as resp_rss:
+                root = ET.fromstring(resp_rss.read())
+                headlines = [it.find("title").text for it in root.findall(".//item")[:3] if it.find("title") is not None]
+                if headlines:
+                    return "[Tin tức mới nhất]: " + " | ".join(headlines)
+        except Exception:
+            return ""
+        return ""
+
+    def _fetch_wiki():
+        if is_realtime:
+            return ""
         wiki_lang = {"vi": "vi", "en": "en", "zh": "zh", "fr": "fr"}.get(lang_key, "en")
         try:
             search_url = (
@@ -799,20 +793,23 @@ def fetch_internet_knowledge(query: str, lang_key: str) -> str:
                 f"&srsearch={urllib.parse.quote(query)}&format=json&utf8=1&srlimit=1"
             )
             req = urllib.request.Request(search_url, headers={"User-Agent": "EIU-Assistant/1.0"})
-            with urllib.request.urlopen(req, timeout=4) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                hits = data.get("query", {}).get("search", [])
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                hits = json.loads(resp.read().decode("utf-8")).get("query", {}).get("search", [])
                 if hits:
                     title = hits[0]["title"]
                     sum_url = f"https://{wiki_lang}.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(title)}"
                     req2 = urllib.request.Request(sum_url, headers={"User-Agent": "EIU-Assistant/1.0"})
-                    with urllib.request.urlopen(req2, timeout=4) as resp2:
-                        sdata = json.loads(resp2.read().decode("utf-8"))
-                        ext = sdata.get("extract", "").strip()
+                    with urllib.request.urlopen(req2, timeout=2.0) as resp2:
+                        ext = json.loads(resp2.read().decode("utf-8")).get("extract", "").strip()
                         if ext:
-                            snippets.append(f"[Wikipedia - {title}]: {ext[:450]}")
+                            return f"[Wikipedia - {title}]: {ext[:400]}"
         except Exception:
-            pass
+            return ""
+        return ""
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as ex:
+        futs = [ex.submit(_fetch_ddg), ex.submit(_fetch_news), ex.submit(_fetch_wiki)]
+        snippets = [f.result() for f in futs if f.result()]
 
     return "\n".join(snippets)
 
@@ -905,46 +902,32 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
         except Exception:
             pass
 
-    # Attempt 1: Pollinations OpenAI POST (openai / searchgpt)
-    for _pmodel in ("openai", "searchgpt"):
-        try:
-            payload = {
-                "model": _pmodel,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": question_text},
-                ],
-                "temperature": 0.35,
-            }
-            req2 = urllib.request.Request(
-                "https://text.pollinations.ai/openai",
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
-                method="POST",
-            )
-            with urllib.request.urlopen(req2, timeout=12) as resp2:
-                raw = json.loads(resp2.read().decode("utf-8"))
-                content2 = raw["choices"][0]["message"]["content"]
-                m_ans, f_ans = _split_reply(content2)
-                if m_ans and f_ans:
-                    return m_ans, f_ans
-        except Exception:
-            continue
-
-    # Attempt 2: Pollinations GET (zero-key backup)
+    # Attempt 1: Fast Pollinations OpenAI POST (tight 5s timeout so user never waits long!)
     try:
-        full_prompt = f"{system_prompt}\n\nUser question: {question_text}"
-        url = "https://text.pollinations.ai/" + urllib.parse.quote(full_prompt)
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=12) as resp:
-            content = resp.read().decode("utf-8")
-            m_ans, f_ans = _split_reply(content)
+        payload = {
+            "model": "openai",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": question_text},
+            ],
+            "temperature": 0.35,
+        }
+        req2 = urllib.request.Request(
+            "https://text.pollinations.ai/openai",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req2, timeout=5) as resp2:
+            raw = json.loads(resp2.read().decode("utf-8"))
+            content2 = raw["choices"][0]["message"]["content"]
+            m_ans, f_ans = _split_reply(content2)
             if m_ans and f_ans:
                 return m_ans, f_ans
     except Exception:
         pass
 
-    # Attempt 3: Clean Google-style synthesized answer directly from live Web Search / News / Wikipedia
+    # Attempt 2: Clean Google-style synthesized answer directly from live Web Search / News / Wikipedia
     if web_context:
         parts = [re.sub(r"^\[[^\]]+\]:\s*", "", ln).strip() for ln in web_context.splitlines() if ln.strip()]
         primary_info = parts[0][:460] if parts else ""
@@ -965,26 +948,77 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
 def generate_doctor_replies(question_text: str, use_live_llm: bool = True) -> tuple:
     q = question_text.lower().strip()
 
-    # Only keep exact app-specific medical/metric shortcuts; send ALL other custom questions to live Web Search + AI!
+    # Instant (<0.05s) clinical-grade answers for the 6 core medical & screening questions!
     if lang_code == "vi":
-        if any(w in q for w in ["recall", "precision", "f2", "pr-auc"]):
-            ans_m = (
-                f"Trong bài toán tầm soát tiểu đường tại nhà (ngưỡng hiện tại <b>{active_th:.2f}</b>), "
-                f"<b>Recall (Độ nhạy = {rec_now:.1%}) quan trọng hơn nhiều so với Precision ({prec_now:.1%})!</b> "
-                f"Vì báo động giả chỉ tốn khoảng ~${cost_fp_live:.0f} xét nghiệm máu kiểm tra, còn bỏ sót bệnh gây biến chứng nặng. "
-                f"Chỉ số tối ưu là <b>F2-Score ({f2_now:.3f})</b>, <b>PR-AUC ({pr_auc_live:.3f})</b> và <b>ROC-AUC ({roc_auc_live:.3f})</b>."
+        if any(w in q for w in ["recall", "precision", "f2", "pr-auc", "độ nhạy"]):
+            return (
+                f"Trong tầm soát tiểu đường tại nhà (ngưỡng hiện tại <b>{active_th:.2f}</b>), "
+                f"<b>Recall (Độ nhạy = {rec_now:.1%}) quan trọng hơn Precision ({prec_now:.1%})</b> "
+                f"vì báo động giả chỉ tốn khoảng ~${cost_fp_live:.0f} xét nghiệm máu, còn bỏ sót bệnh gây biến chứng nặng. "
+                f"Mô hình đạt <b>F2-Score = {f2_now:.3f}</b>, <b>PR-AUC = {pr_auc_live:.3f}</b> và <b>ROC-AUC = {roc_auc_live:.3f}</b>.",
+                "Bạn có thể tự kéo thử tỷ lệ chi phí trên trang <b>Ngưỡng cắt & Chi phí</b> ở thanh menu bên trái để xem Recall và F2-Score thay đổi trực quan nhé!",
             )
-            ans_f = (
-                "Bạn có thể tự kéo thử tỷ lệ chi phí trên trang <b>Ngưỡng cắt & Chi phí</b> ở thanh menu bên trái để xem Recall và F2-Score thay đổi trực quan nhé!"
+        if any(w in q for w in ["bao nhiêu là bình thường", "bình thường", "chỉ số đường huyết"]):
+            return (
+                "Theo Hiệp hội Đái tháo đường Hoa Kỳ (ADA): đường huyết lúc đói (FPG) <b>dưới 100 mg/dL (5.6 mmol/L)</b> và <b>HbA1c dưới 5.7%</b> là bình thường. "
+                "Tiền tiểu đường nằm ở mức <b>100–125 mg/dL</b> (HbA1c <b>5.7%–6.4%</b>), và từ <b>126 mg/dL</b> hoặc <b>HbA1c ≥ 6.5%</b> là ngưỡng chẩn đoán tiểu đường.",
+                "Nếu bạn có kết quả nằm trong vùng tiền tiểu đường, đây là giai đoạn vàng để điều chỉnh ăn uống và tập luyện nhằm đưa đường huyết về bình thường!",
             )
-            return ans_m, ans_f
+        if any(w in q for w in ["đảo ngược", "tiền tiểu đường"]):
+            return (
+                "Hoàn toàn có thể! Nhiều nghiên cứu lâm sàng (như chương trình DPP của Hoa Kỳ) chứng minh giảm khoảng <b>5%–7% cân nặng</b> kết hợp đi bộ nhanh <b>150 phút/tuần</b> giúp giảm tới <b>58% nguy cơ</b> tiến triển thành tiểu đường tuýp 2.",
+                "Bạn hãy bắt đầu từ những bước nhỏ dễ duy trì: giảm nước ngọt và tinh bột tinh chế, tăng rau xanh trong mỗi bữa ăn và đi bộ 20–30 phút sau bữa tối nhé!",
+            )
+        if any(w in q for w in ["cao huyết áp", "mỡ máu", "cholesterol"]):
+            return (
+                "Cao huyết áp, mỡ máu cao và đường huyết cao thường đi chung trong <b>Hội chứng chuyển hóa</b> do tình trạng đề kháng insulin. "
+                "Trong mô hình AI của hệ thống, đây đều là những yếu tố trọng yếu đẩy điểm rủi ro tăng lên rõ rệt.",
+                "Kiểm soát tốt huyết áp và mỡ máu bằng cách ăn nhạt, hạn chế chất béo bão hòa và khám định kỳ sẽ đồng thời bảo vệ tim mạch lẫn phòng ngừa tiểu đường!",
+            )
+        if any(w in q for w in ["thừa cân", "ăn uống", "vận động", "thực đơn", "ngừa tiểu đường"]):
+            return (
+                f"Với chỉ số BMI hiện tại <b>{bmi_val:.1f} kg/m²</b>, khi bạn giảm nhẹ xuống <b>{lower_bmi:.1f} kg/m²</b>, độ nhạy insulin cải thiện rõ rệt giúp điểm rủi ro giảm xuống còn <b>{prob_whatif:.1%}</b>.",
+                "Áp dụng quy tắc <b>Đĩa thức ăn</b>: 1/2 rau xanh không tinh bột, 1/4 đạm nạc (cá, ức gà, đậu phụ), 1/4 tinh bột nguyên cám (gạo lứt, yến mạch), kết hợp đi bộ nhanh 30 phút mỗi ngày nhé!",
+            )
         if any(w in q for w in ["xét nghiệm máu nào", "yêu cầu xét nghiệm", "xét nghiệm gì", "fpg", "hba1c"]):
-            ans_m = (
+            return (
                 f"Bạn nên yêu cầu bác sĩ làm <b>Xét nghiệm đường huyết lúc đói (FPG — nhịn ăn 8 tiếng)</b> hoặc <b>HbA1c</b> "
-                f"(đánh giá đường huyết trung bình 3 tháng). Với điểm số <b>{prob_gb:.1%}</b> của bạn (ngưỡng cắt <b>{active_th:.2f}</b>), đây là cách kiểm tra chính xác nhất!"
+                f"(đánh giá đường huyết trung bình 3 tháng). Với điểm số <b>{prob_gb:.1%}</b> của bạn (ngưỡng cắt <b>{active_th:.2f}</b>), đây là cách kiểm tra chính xác nhất!",
+                "Tối hôm trước ngày đi lấy máu FPG bạn nhớ nhịn ăn từ 22h đêm (chỉ uống nước lọc) và ngủ sớm để kết quả chuẩn nhất nhé!",
             )
-            ans_f = "Tối hôm trước ngày đi lấy máu FPG bạn nhớ nhịn ăn từ 22h đêm (chỉ uống nước lọc) và ngủ sớm để kết quả chuẩn nhất nhé!"
-            return ans_m, ans_f
+    elif lang_code == "en":
+        if any(w in q for w in ["recall", "precision", "f2", "pr-auc"]):
+            return (
+                f"At threshold <b>{active_th:.2f}</b>, <b>Recall ({rec_now:.1%})</b> matters more than Precision ({prec_now:.1%}) because a false alarm only costs a ~${cost_fp_live:.0f} blood test, while a missed case delays care. "
+                f"The model achieves <b>F2 = {f2_now:.3f}</b>, <b>PR-AUC = {pr_auc_live:.3f}</b>, and <b>ROC-AUC = {roc_auc_live:.3f}</b>.",
+                "You can adjust the FN:FP cost ratio interactively on the <b>Threshold & Cost</b> page in the sidebar!",
+            )
+        if any(w in q for w in ["normal", "fpg", "hba1c", "levels"]):
+            return (
+                "Per ADA guidelines, normal Fasting Plasma Glucose (FPG) is <b>below 100 mg/dL</b> and <b>HbA1c below 5.7%</b>. "
+                "Prediabetes is <b>100–125 mg/dL</b> (HbA1c <b>5.7%–6.4%</b>), and diabetes is <b>≥126 mg/dL</b> or <b>HbA1c ≥6.5%</b>.",
+                "If you are in the prediabetes range, early nutrition and walking habits can often bring numbers right back to normal!",
+            )
+        if any(w in q for w in ["reversed", "prediabetes"]):
+            return (
+                "Yes! Clinical trials (such as the US Diabetes Prevention Program) show losing <b>5%–7% of body weight</b> and getting <b>150 minutes/week</b> of brisk walking cuts type 2 diabetes risk by <b>58%</b>.",
+                "Start with small daily wins: swap sugary drinks for water, fill half your plate with vegetables, and take a 20–30 minute walk after meals!",
+            )
+        if any(w in q for w in ["blood pressure", "cholesterol"]):
+            return (
+                "High blood pressure and high cholesterol frequently cluster with elevated blood sugar as part of <b>metabolic syndrome</b> driven by insulin resistance, making them top predictors in our screening model.",
+                "Managing blood pressure and cholesterol with lower sodium, fiber-rich foods, and regular checkups protects both your heart and blood sugar!",
+            )
+        if any(w in q for w in ["meal plan", "exercise", "diet", "lower diabetes risk"]):
+            return (
+                f"From your current BMI of <b>{bmi_val:.1f} kg/m²</b>, lowering toward <b>{lower_bmi:.1f} kg/m²</b> improves insulin sensitivity and brings your estimated score to <b>{prob_whatif:.1%}</b>.",
+                "Try the balanced plate method: 1/2 non-starchy veggies, 1/4 lean protein, 1/4 whole grains, plus 30 minutes of brisk walking daily!",
+            )
+        if any(w in q for w in ["which blood test", "ask my doctor", "screening"]):
+            return (
+                f"Ask your doctor for a <b>Fasting Plasma Glucose (FPG)</b> test or an <b>HbA1c</b> test (3-month average). With your current score of <b>{prob_gb:.1%}</b> (threshold <b>{active_th:.2f}</b>), these are the gold-standard checks.",
+                "For an FPG test, fast for at least 8 hours overnight (water is fine) so your morning result is accurate!",
+            )
 
     # Call Google-style Live Web Search + AI LLM for ANY arbitrary question!
     if use_live_llm:
@@ -1006,96 +1040,143 @@ def generate_doctor_replies(question_text: str, use_live_llm: bool = True) -> tu
     return ans_m, ans_f
 
 
-with st.container(border=True):
-    st.markdown(
-        f"<h4 style='margin:0 0 8px 0; color:#0f172a; font-weight:800;'>{d_cfg['chat_header']}</h4>",
-        unsafe_allow_html=True,
-    )
-    doc_mode = st.radio(
-        d_cfg["choose_doc"],
-        options=["both", "male", "female"],
-        format_func=lambda k: d_cfg["opt_both"]
-        if k == "both"
-        else (d_cfg["opt_male"] if k == "male" else d_cfg["opt_female"]),
-        horizontal=True,
-    )
+AUTO_VOICE_LBL = {
+    "vi": "🔊 Tự động phát giọng bác sĩ ngay khi trả lời",
+    "en": "🔊 Auto-speak doctor's reply immediately",
+    "zh": "🔊 回复后立即自动播放医生语音",
+    "fr": "🔊 Lecture vocale automatique de la réponse",
+}
 
-    if "active_question" not in st.session_state:
-        st.session_state["active_question"] = d_cfg["q1"]
 
-    r1_c1, r1_c2, r1_c3 = st.columns(3)
-    if r1_c1.button(d_cfg["q1"], use_container_width=True):
-        st.session_state["active_question"] = d_cfg["q1"]
-    if r1_c2.button(d_cfg["q2"], use_container_width=True):
-        st.session_state["active_question"] = d_cfg["q2"]
-    if r1_c3.button(d_cfg["q3"], use_container_width=True):
-        st.session_state["active_question"] = d_cfg["q3"]
-
-    r2_c1, r2_c2, r2_c3 = st.columns(3)
-    if r2_c1.button(d_cfg["q4"], use_container_width=True):
-        st.session_state["active_question"] = d_cfg["q4"]
-    if r2_c2.button(d_cfg["q5"], use_container_width=True):
-        st.session_state["active_question"] = d_cfg["q5"]
-    if r2_c3.button(d_cfg["q6"], use_container_width=True):
-        st.session_state["active_question"] = d_cfg["q6"]
-
-    in_col1, in_col2 = st.columns([4, 1])
-    custom_q = in_col1.text_input(
-        "Ask",
-        value="",
-        placeholder=d_cfg["input_placeholder"],
-        label_visibility="collapsed",
-    )
-    if in_col2.button(d_cfg["send_btn"], type="primary", use_container_width=True) and custom_q.strip():
-        st.session_state["active_question"] = custom_q.strip()
-
-    current_q = st.session_state["active_question"]
-    with st.spinner("🤖 AI Doctors are thinking..."):
-        reply_m, reply_f = generate_doctor_replies(current_q, use_live_llm=True)
-
-    st.markdown(
-        f"<div style='background:#f1f5f9; border:1px solid #cbd5e1; color:#0f172a; padding:10px 16px; border-radius:12px; font-weight:700; margin:10px 0;'>"
-        f"🙋 {current_q}</div>",
-        unsafe_allow_html=True,
-    )
-
-    if doc_mode in ["both", "male"]:
+@st.fragment
+def render_doctor_chat_fragment():
+    with st.container(border=True):
         st.markdown(
-            "<div style='display:flex; align-items:flex-start; gap:14px; background:#ffffff; border:1px solid #bfdbfe; border-left:5px solid #1d4ed8; "
-            "padding:14px 16px; border-radius:12px; margin-bottom:10px;'>"
-            f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_MALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #1d4ed8; flex-shrink:0;'/>"
-            f"<div style='color:#1e293b; font-size:0.93rem; line-height:1.55;'><b style='color:#1d4ed8;'>{d_cfg['m_name']}:</b> {reply_m}</div>"
-            "</div>",
+            f"<h4 style='margin:0 0 8px 0; color:#0f172a; font-weight:800;'>{d_cfg['chat_header']}</h4>",
             unsafe_allow_html=True,
         )
-    if doc_mode in ["both", "female"]:
+        top_c1, top_c2 = st.columns([3, 2])
+        with top_c1:
+            doc_mode = st.radio(
+                d_cfg["choose_doc"],
+                options=["both", "male", "female"],
+                format_func=lambda k: d_cfg["opt_both"]
+                if k == "both"
+                else (d_cfg["opt_male"] if k == "male" else d_cfg["opt_female"]),
+                horizontal=True,
+                key="chat_doc_mode",
+            )
+        with top_c2:
+            auto_voice = st.toggle(
+                AUTO_VOICE_LBL.get(lang_code, AUTO_VOICE_LBL["en"]),
+                value=True,
+                key="chat_auto_voice",
+            )
+
+        if "active_question" not in st.session_state:
+            st.session_state["active_question"] = d_cfg["q1"]
+        if "chat_should_speak" not in st.session_state:
+            st.session_state["chat_should_speak"] = False
+
+        r1_c1, r1_c2, r1_c3 = st.columns(3)
+        if r1_c1.button(d_cfg["q1"], key="qbtn_1", use_container_width=True):
+            st.session_state["active_question"] = d_cfg["q1"]
+            st.session_state["chat_should_speak"] = True
+            st.session_state["chat_voice_gender"] = "female" if doc_mode == "female" else "male"
+        if r1_c2.button(d_cfg["q2"], key="qbtn_2", use_container_width=True):
+            st.session_state["active_question"] = d_cfg["q2"]
+            st.session_state["chat_should_speak"] = True
+            st.session_state["chat_voice_gender"] = "female" if doc_mode == "female" else "male"
+        if r1_c3.button(d_cfg["q3"], key="qbtn_3", use_container_width=True):
+            st.session_state["active_question"] = d_cfg["q3"]
+            st.session_state["chat_should_speak"] = True
+            st.session_state["chat_voice_gender"] = "female" if doc_mode == "female" else "male"
+
+        r2_c1, r2_c2, r2_c3 = st.columns(3)
+        if r2_c1.button(d_cfg["q4"], key="qbtn_4", use_container_width=True):
+            st.session_state["active_question"] = d_cfg["q4"]
+            st.session_state["chat_should_speak"] = True
+            st.session_state["chat_voice_gender"] = "female" if doc_mode == "female" else "male"
+        if r2_c2.button(d_cfg["q5"], key="qbtn_5", use_container_width=True):
+            st.session_state["active_question"] = d_cfg["q5"]
+            st.session_state["chat_should_speak"] = True
+            st.session_state["chat_voice_gender"] = "female" if doc_mode == "female" else "male"
+        if r2_c3.button(d_cfg["q6"], key="qbtn_6", use_container_width=True):
+            st.session_state["active_question"] = d_cfg["q6"]
+            st.session_state["chat_should_speak"] = True
+            st.session_state["chat_voice_gender"] = "female" if doc_mode == "female" else "male"
+
+        with st.form("chat_ask_form", clear_on_submit=True, border=False):
+            in_col1, in_col2 = st.columns([4, 1])
+            custom_q = in_col1.text_input(
+                "Ask",
+                value="",
+                placeholder=d_cfg["input_placeholder"],
+                label_visibility="collapsed",
+            )
+            ask_submitted = in_col2.form_submit_button(d_cfg["send_btn"], type="primary", use_container_width=True)
+            if ask_submitted and custom_q.strip():
+                st.session_state["active_question"] = custom_q.strip()
+                st.session_state["chat_should_speak"] = True
+                st.session_state["chat_voice_gender"] = "female" if doc_mode == "female" else "male"
+
+        current_q = st.session_state["active_question"]
+        with st.spinner("🤖 AI Doctors are answering..."):
+            reply_m, reply_f = generate_doctor_replies(current_q, use_live_llm=True)
+
         st.markdown(
-            "<div style='display:flex; align-items:flex-start; gap:14px; background:#ffffff; border:1px solid #bae6fd; border-left:5px solid #0284c7; "
-            "padding:14px 16px; border-radius:12px; margin-bottom:4px;'>"
-            f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_FEMALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #0284c7; flex-shrink:0;'/>"
-            f"<div style='color:#1e293b; font-size:0.93rem; line-height:1.55;'><b style='color:#0369a1;'>{d_cfg['f_name']}:</b> {reply_f}</div>"
-            "</div>",
+            f"<div style='background:#f1f5f9; border:1px solid #cbd5e1; color:#0f172a; padding:10px 16px; border-radius:12px; font-weight:700; margin:10px 0;'>"
+            f"🙋 {current_q}</div>",
             unsafe_allow_html=True,
         )
 
-    # Native Audio playback buttons specifically for the Chat Reply!
-    clean_chat_m = re.sub(r"<[^>]+>", "", reply_m)
-    clean_chat_f = re.sub(r"<[^>]+>", "", reply_f)
-    ca1, ca2 = st.columns(2)
-    if ca1.button(f"{btn_m_lbl} (Chat)", key="btn_chat_voice_m", use_container_width=True):
-        st.session_state["chat_audio_bytes"], st.session_state["chat_audio_fmt"] = synthesize_voice_mp3(
-            clean_chat_m, lang_code, gender="male"
-        )
-    if ca2.button(f"{btn_f_lbl} (Chat)", key="btn_chat_voice_f", use_container_width=True):
-        st.session_state["chat_audio_bytes"], st.session_state["chat_audio_fmt"] = synthesize_voice_mp3(
-            clean_chat_f, lang_code, gender="female"
-        )
-    if st.session_state.get("chat_audio_bytes"):
-        st.audio(
-            st.session_state["chat_audio_bytes"],
-            format=st.session_state.get("chat_audio_fmt", "audio/mp3"),
-            autoplay=True,
-        )
+        if doc_mode in ["both", "male"]:
+            st.markdown(
+                "<div style='display:flex; align-items:flex-start; gap:14px; background:#ffffff; border:1px solid #bfdbfe; border-left:5px solid #1d4ed8; "
+                "padding:14px 16px; border-radius:12px; margin-bottom:10px;'>"
+                f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_MALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #1d4ed8; flex-shrink:0;'/>"
+                f"<div style='color:#1e293b; font-size:0.93rem; line-height:1.55;'><b style='color:#1d4ed8;'>{d_cfg['m_name']}:</b> {reply_m}</div>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+        if doc_mode in ["both", "female"]:
+            st.markdown(
+                "<div style='display:flex; align-items:flex-start; gap:14px; background:#ffffff; border:1px solid #bae6fd; border-left:5px solid #0284c7; "
+                "padding:14px 16px; border-radius:12px; margin-bottom:4px;'>"
+                f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_FEMALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #0284c7; flex-shrink:0;'/>"
+                f"<div style='color:#1e293b; font-size:0.93rem; line-height:1.55;'><b style='color:#0369a1;'>{d_cfg['f_name']}:</b> {reply_f}</div>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+        clean_chat_m = re.sub(r"<[^>]+>", "", reply_m)
+        clean_chat_f = re.sub(r"<[^>]+>", "", reply_f)
+
+        ca1, ca2 = st.columns(2)
+        if ca1.button(f"{btn_m_lbl} (Chat)", key="btn_chat_voice_m", use_container_width=True):
+            st.session_state["chat_should_speak"] = True
+            st.session_state["chat_voice_gender"] = "male"
+        if ca2.button(f"{btn_f_lbl} (Chat)", key="btn_chat_voice_f", use_container_width=True):
+            st.session_state["chat_should_speak"] = True
+            st.session_state["chat_voice_gender"] = "female"
+
+        if st.session_state.get("chat_should_speak") and (auto_voice or st.session_state.get("chat_voice_gender")):
+            g_sel = st.session_state.get("chat_voice_gender", "female" if doc_mode == "female" else "male")
+            txt_sel = clean_chat_f if g_sel == "female" else clean_chat_m
+            c_bytes, c_fmt = synthesize_voice_mp3(txt_sel, lang_code, gender=g_sel)
+            st.session_state["chat_audio_bytes"] = c_bytes
+            st.session_state["chat_audio_fmt"] = c_fmt
+            st.session_state["chat_should_speak"] = False
+
+        if st.session_state.get("chat_audio_bytes"):
+            st.audio(
+                st.session_state["chat_audio_bytes"],
+                format=st.session_state.get("chat_audio_fmt", "audio/mp3"),
+                autoplay=True,
+            )
+
+
+render_doctor_chat_fragment()
 
 # ==============================================================================
 # 10. DETAILED RESULTS, RISK SPECTRUM & TOP FACTORS

@@ -2,7 +2,7 @@
 
 - **Live Web App (Streamlit Community Cloud):** https://diabetes-screening-assistant-t3-jew6ba9ep8wvmpwr5ryvch.streamlit.app
 - **Public GitHub Repository:** https://github.com/5yf8sygp5p-prog/diabetes-screening-assistant-t3
-- **3-Minute Demo Video:** *(Attach your recorded YouTube / Google Drive demo link here before final submission — see Section 8 for the full user-decision walkthrough script)*
+- **Public Demo Video (Full HD 1080p):** [▶️ Watch Demo Video Online](https://drive.google.com/file/d/17pY_dT8JR3JlkTB_gc_5dMLrEjWlRluP/view?usp=sharing)
 
 > ⚠️ **Disclaimer:** *Educational project — not for clinical use. Results describe statistical patterns in a 2015 US telephone health survey and are not medical advice.*
 
@@ -98,24 +98,7 @@ When the screening model makes an error, who pays and how much?
 
 ---
 
-## 8. 3-Minute Demo Video Script (Follows a Real User Decision)
-
-- **0:00 – 0:35 | The Real User & Decision Context:**
-  - *Screen:* Open `app.py` (`Diabetes Screening Assistant`). Show the language selector switching smoothly between **English, Tiếng Việt, 中文, Français**.
-  - *Voiceover:* "Meet Minh, a 52-year-old adult at home wondering whether he should book a doctor's appointment for a blood sugar test. He doesn't have lab results at home—only everyday health facts. In under 60 seconds, he enters his age group (50–54), height (168 cm), weight (82 kg), rates his general health as Fair, and checks Yes for High Blood Pressure."
-- **0:35 – 1:25 | Actionable Recommendation & Plain-English Explanation:**
-  - *Screen:* Click **Analyze**. Point to the red recommendation banner, the visual risk gauge (`36.4%` vs cutoff `0.18`), the natural frequency (*'About 36 out of 100 adults with similar answers...'*), the Top Factors table, and the What-If BMI card.
-  - *Voiceover:* "Instead of just showing a raw probability, the app gives a clear action: *Ask a health professional about a blood glucose test.* Below, Minh sees in plain English that his High Blood Pressure, Fair General Health, and BMI of 29.1 pushed his risk up, and that lowering his BMI by 2 points would drop his risk score."
-- **1:25 – 2:10 | When the Model Is Wrong, Who Pays? (`Threshold and Cost` Page):**
-  - *Screen:* Click `Threshold and Cost` in the sidebar. Drag the FN:FP cost ratio slider from `5.0` to `8.0` and point to the `Per 1,000 adults screened` table and the two interactive curves.
-  - *Voiceover:* "Why is the cutoff 0.18 instead of 0.50? Because missing undiagnosed diabetes is judged ~5 times worse than an unnecessary blood test. On our validation curve, a 5:1 cost ratio minimizes expected cost at threshold 0.18, catching over 70% of cases."
-- **2:10 – 3:00 | Health Equity Check & Honest Limitations (`Health Equity` & `About Model` Pages):**
-  - *Screen:* Open `Health Equity` (toggle Income vs. Education bar charts with 95% confidence intervals) and then `About Model` (show the 4-model comparison table, Permutation Importance chart, Odds Ratios, and 6 Limitations).
-  - *Voiceover:* "Finally, we audit our model across income and education groups with 95% confidence intervals, compare Logistic Regression against Histogram Gradient Boosting across 7 vs. 10 variables, and clearly state 6 limitations—including that BRFSS is self-reported 2015 US survey data and Asian adults face diabetes risk at lower BMI."
-
----
-
-## 9. How to Run Locally or Deploy to Streamlit Community Cloud
+## 8. How to Run Locally or Deploy to Streamlit Community Cloud
 
 ```bash
 # 1. Install dependencies
@@ -127,3 +110,13 @@ python train.py
 # 3. Launch the Streamlit web app
 streamlit run app.py
 ```
+
+---
+
+## 9. Demo Video (Public Access — Click to Watch)
+
+> 🎬 **Public Streaming Link (Anyone can click & watch without signing in):**  
+> 👉 **[▶️ Watch Full HD 1080p Demo Video on Google Drive](https://drive.google.com/file/d/17pY_dT8JR3JlkTB_gc_5dMLrEjWlRluP/view?usp=sharing)**
+
+[![Watch Full HD Demo Video](demo_video_preview.png)](https://drive.google.com/file/d/17pY_dT8JR3JlkTB_gc_5dMLrEjWlRluP/view?usp=sharing)
+

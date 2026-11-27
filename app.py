@@ -443,8 +443,8 @@ DOC_TEXT = {
         "f_idle": "Xin chào! Mình là <b>BS. Thảo Vy</b>. Bạn cần tư vấn sức khỏe, dinh dưỡng hay hỏi bất kỳ thông tin gì cứ nhắn bên dưới nhé!",
         "m_flag": f"Điểm tương đồng của bạn là <b>{prob_gb:.1%}</b> (vượt ngưỡng tầm soát <b>{active_th:.2f}</b>). Yếu tố nổi bật nhất là <b>{top_feat_label}</b>. Bạn nên đặt lịch làm xét nghiệm <b>Đường huyết lúc đói (FPG)</b> hoặc <b>HbA1c</b> để kiểm tra nhé.",
         "m_safe": f"Tin vui! Điểm rủi ro của bạn chỉ là <b>{prob_gb:.1%}</b> (thấp hơn ngưỡng cảnh báo <b>{active_th:.2f}</b>). Bạn chưa cần xét nghiệm khẩn cấp hôm nay, chỉ cần duy trì khám sức khỏe định kỳ.",
-        "f_flag": f"BMI hiện tại của bạn là <b>{bmi_val:.1f} kg/m²</b>. Nếu bạn giảm nhẹ BMI xuống <b>{lower_bmi:.1f} kg/m²</b> kết hợp đi bộ 30 phút/ngày, điểm rủi ro sẽ giảm xuống còn <b>{prob_whatif:.1%}</b>!",
-        "f_safe": f"BMI của bạn là <b>{bmi_val:.1f} kg/m²</b>. Để giữ mức rủi ro thấp (<b>{prob_whatif:.1%}</b>), nhớ ăn nhiều rau xanh, bớt trà sữa full topping và ngủ đủ giấc nha!",
+        "f_flag": f"Với cân nặng <b>{weight_kg} kg</b> và chiều cao <b>{height_cm} cm</b> (BMI <b>{bmi_val:.1f} kg/m²</b>), bạn nên duy trì đi bộ nhanh 30 phút/ngày, ăn nhiều rau xanh trước tinh bột và hạn chế đồ uống nhiều đường để hỗ trợ ổn định đường huyết!",
+        "f_safe": f"Chỉ số thể trạng hiện tại của bạn là <b>{bmi_val:.1f} kg/m²</b> ({weight_kg} kg, {height_cm} cm). Hãy tiếp tục giữ thói quen ăn nhiều rau xanh, hạn chế đồ ngọt và vận động đều đặn mỗi ngày nhé!",
         "chat_header": "💬 Chat Trực Tiếp Cùng AI BS. Minh Quân & BS. Thảo Vy",
         "choose_doc": "Chọn bác sĩ bạn muốn tương tác:",
         "opt_both": "👨‍⚕️👩‍⚕️ Cả 2 Bác sĩ (Minh Quân & Thảo Vy)",
@@ -468,8 +468,8 @@ DOC_TEXT = {
         "f_idle": "Hi! I'm <b>Dr. Clara Bennett</b>. Feel free to ask about nutrition, lifestyle, or anything on your mind below!",
         "m_flag": f"Your estimated risk score is <b>{prob_gb:.1%}</b> (above our <b>{active_th:.2f}</b> cutoff; top factor: <b>{top_feat_label}</b>). I recommend asking your doctor for a routine <b>Fasting Plasma Glucose (FPG)</b> or <b>HbA1c</b> test.",
         "m_safe": f"Good news! Your estimated score is <b>{prob_gb:.1%}</b> (below our <b>{active_th:.2f}</b> cutoff). No urgent lab test is flagged today.",
-        "f_flag": f"Your BMI is <b>{bmi_val:.1f} kg/m²</b>. Lowering your BMI toward <b>{lower_bmi:.1f} kg/m²</b> with 30 minutes of daily walking reduces your risk score to <b>{prob_whatif:.1%}</b>!",
-        "f_safe": f"Your BMI is <b>{bmi_val:.1f} kg/m²</b>. Keep enjoying balanced meals and daily activity to maintain a low risk of <b>{prob_whatif:.1%}</b>!",
+        "f_flag": f"At <b>{weight_kg} kg</b> and <b>{height_cm} cm</b> (BMI <b>{bmi_val:.1f} kg/m²</b>), brisk walking 30 minutes a day and filling half your plate with non-starchy vegetables are great daily steps to support healthy blood sugar!",
+        "f_safe": f"Your current BMI is <b>{bmi_val:.1f} kg/m²</b> ({weight_kg} kg, {height_cm} cm). Keep enjoying balanced, fiber-rich meals and regular daily activity to maintain your low risk!",
         "chat_header": "💬 Live AI Chat with Dr. Ethan Brooks & Dr. Clara Bennett",
         "choose_doc": "Choose which doctor to talk to:",
         "opt_both": "👨‍⚕️👩‍⚕️ Both Doctors (Ethan Brooks & Clara Bennett)",
@@ -1225,14 +1225,3 @@ if has_run:
         "</table>"
     )
     st.markdown(factors_table, unsafe_allow_html=True)
-
-    delta_p = prob_whatif - prob_gb
-    st.markdown(
-        f"<div class='clean-card' style='margin-top:14px; background:#f8fafc; border-color:#cbd5e1;'>"
-        f"<p style='margin:0 0 4px 0; font-weight:800; color:#0f172a;'>{t['what_if_title']}</p>"
-        f"<p style='margin:0; font-size:0.93rem; color:#1e293b; font-weight:500;'>"
-        f"{t['what_if_desc'].format(bmi1=f'{bmi_val:.1f}', bmi2=f'{lower_bmi:.1f}', p1=f'{prob_gb:.1%}', p2=f'{prob_whatif:.1%}', delta=f'{delta_p:+.1%}')}"
-        f"</p>"
-        f"</div>",
-        unsafe_allow_html=True,
-    )

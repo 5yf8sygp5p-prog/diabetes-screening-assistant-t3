@@ -317,10 +317,7 @@ def synthesize_local_rag_reply(
                     )
                 )
                 ans_m = f"{top['content']} {personal_link}"
-                ans_f = (
-                    f"{top['tip']} Với mức BMI hiện tại <b>{bmi_str}</b>, nếu điều chỉnh nhẹ về <b>{lower_bmi_str}</b>, "
-                    f"điểm rủi ro của bạn sẽ chuyển về mức <b>{whatif_pct}</b>!"
-                )
+                ans_f = f"{top['tip']}"
             return ans_m, ans_f
         else:
             if is_tech_q:
@@ -336,9 +333,7 @@ def synthesize_local_rag_reply(
                     )
                 )
                 ans_m = f"{top['content']} {personal_link}"
-                ans_f = (
-                    f"{top['tip']} Based on your current BMI of <b>{bmi_str}</b>, moving toward <b>{lower_bmi_str}</b> would adjust your score to <b>{whatif_pct}</b>!"
-                )
+                ans_f = f"{top['tip']}"
             return ans_m, ans_f
 
     if web_context:

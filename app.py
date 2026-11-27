@@ -1104,38 +1104,12 @@ with st.container(border=True):
     if doc_mode in ["both", "female"]:
         st.markdown(
             "<div style='display:flex; align-items:flex-start; gap:14px; background:#ffffff; border:1px solid #bae6fd; border-left:5px solid #0284c7; "
-            "padding:14px 16px; border-radius:12px; margin-bottom:8px;'>"
+            "padding:14px 16px; border-radius:12px; margin-bottom:4px;'>"
             f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_FEMALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #0284c7; flex-shrink:0;'/>"
             f"<div style='color:#1e293b; font-size:0.93rem; line-height:1.55;'><b style='color:#0369a1;'>{d_cfg['f_name']}:</b> {reply_f}</div>"
             "</div>",
             unsafe_allow_html=True,
         )
-
-    # Transparent RAG Citations + Model / Few-Shot / Cost / Traffic-Trial Telemetry Inspector
-    _tel = st.session_state.get("_last_rag_telemetry")
-    if _tel:
-        _hits = _tel.get("rag_hits", [])
-        _qinfo = _tel.get("quota", {})
-        _hit_badges = " · ".join(f"<code>{h['id']}</code> ({h['score']:.2f})" for h in _hits) if _hits else "Live Web / General"
-        _exp_lbl = (
-            "📚 Nguồn tri thức RAG & Quản trị AI (Model · Few-Shot · Chi phí · Lưu lượng/Trial)"
-            if lang_code == "vi"
-            else "📚 Retrieved RAG Evidence & AI Governance (Model · Few-Shot · Cost · Traffic/Trial)"
-        )
-        with st.expander(_exp_lbl):
-            st.markdown(
-                f"- **🧠 AI Model & Prompting:** `{_tel['engine_used']}` · Chiến lược: **2-Shot Clinical Prompting + Hồ sơ bệnh nhân trực tiếp (`BMI {bmi_val:.1f}`, `Score {prob_gb:.1%}`)**\n"
-                f"- **📚 Truy xuất RAG (`TfidfVectorizer` Word + Char N-gram):** {_hit_badges}\n"
-                f"- **💰 Kiểm soát Chi phí (`Chi phí`):** `~{_tel['prompt_tokens'] + _tel['completion_tokens']} tokens` "
-                f"(nén Top-3 đoạn RAG giúp **giảm ~95% token** so với nhồi toàn bộ tài liệu) · "
-                f"Chi phí phiên này: **`${_tel['est_cost_usd']:.5f}`** *(so với `${_tel['baseline_gpt4o_usd']:.4f}` nếu gọi GPT-4o không nén/cache)* · "
-                f"Cache Hits: **{st.session_state.get('_ai_cache_hits', 0)}**\n"
-                f"- **🚦 Lưu lượng & Hạn ngạch Dùng thử (`Lưu lượng - Trial`):** `{_qinfo.get('rpm_used', 1)}/{_qinfo.get('max_rpm', 25)} req/phút` · "
-                f"Trial phiên: `{_qinfo.get('trial_used', 1)}/{_qinfo.get('trial_limit', 40)}` · Trạng thái: **{_qinfo.get('status_badge', '🟢 Healthy')}**",
-                unsafe_allow_html=True,
-            )
-            for h in _hits:
-                st.caption(f"🔎 **[{h['id']}] {h['source']}** (Cosine = `{h['score']:.3f}`): {h['content']}")
 
     # Speak immediately using the configured doctor voice(s) whenever a new chat reply is generated!
     clean_chat_m = re.sub(r"<[^>]+>", "", reply_m)

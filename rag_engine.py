@@ -301,40 +301,44 @@ def synthesize_local_rag_reply(
 
     if rag_hits and rag_hits[0]["score"] >= 0.09:
         top = rag_hits[0]
-        sec = rag_hits[1] if len(rag_hits) > 1 and rag_hits[1]["score"] >= 0.12 else None
-        cite = f"<b>[{top['id']}]</b>"
-        extra_fact = f" Ngoài ra, theo <b>[{sec['id']}]</b>: {sec['content'][:180]}..." if sec and lang_key == "vi" else (
-            f" Additionally, per <b>[{sec['id']}]</b>: {sec['content'][:180]}..." if sec else ""
-        )
+        is_tech_q = top["id"] in ("KB-06", "KB-07", "KB-09")
 
         if lang_key == "vi":
-            personal_link = (
-                f"Liên hệ trực tiếp hồ sơ của bạn (điểm rủi ro <b>{prob_pct}</b> so với ngưỡng <b>{th_str}</b>, yếu tố chính: <b>{top_f}</b>, BMI <b>{bmi_str}</b>): "
-                + (
-                    "bạn đang vượt ngưỡng tầm soát nên rất khuyến khích hỏi bác sĩ về xét nghiệm máu kiểm tra."
-                    if is_flag
-                    else "hiện điểm số của bạn đang ở vùng an toàn dưới ngưỡng cảnh báo, chỉ cần duy trì theo dõi định kỳ."
+            if is_tech_q:
+                ans_m = f"{top['content']}"
+                ans_f = f"{top['tip']}"
+            else:
+                personal_link = (
+                    f"Liên hệ với hồ sơ hiện tại của bạn (điểm rủi ro <b>{prob_pct}</b> so với ngưỡng <b>{th_str}</b>, BMI <b>{bmi_str}</b>): "
+                    + (
+                        "bạn đang vượt ngưỡng tầm soát nên rất nên trao đổi với bác sĩ để làm xét nghiệm máu kiểm tra."
+                        if is_flag
+                        else "điểm số của bạn đang ở mức an toàn, chỉ cần duy trì lối sống lành mạnh và kiểm tra định kỳ."
+                    )
                 )
-            )
-            ans_m = f"Dựa trên kho tri thức y khoa {cite} (<i>{top['source']}</i>): {top['content']} {personal_link}"
-            ans_f = (
-                f"{top['tip']} Với mức BMI hiện tại <b>{bmi_str}</b>, mô phỏng trên hệ thống cho thấy nếu điều chỉnh về <b>{lower_bmi_str}</b>, "
-                f"điểm rủi ro của bạn sẽ chuyển về mức <b>{whatif_pct}</b>!{extra_fact}"
-            )
+                ans_m = f"{top['content']} {personal_link}"
+                ans_f = (
+                    f"{top['tip']} Với mức BMI hiện tại <b>{bmi_str}</b>, nếu điều chỉnh nhẹ về <b>{lower_bmi_str}</b>, "
+                    f"điểm rủi ro của bạn sẽ chuyển về mức <b>{whatif_pct}</b>!"
+                )
             return ans_m, ans_f
         else:
-            personal_link = (
-                f"Connecting this to your profile (score <b>{prob_pct}</b> vs. cutoff <b>{th_str}</b>, top factor: <b>{top_f}</b>, BMI <b>{bmi_str}</b>): "
-                + (
-                    "since your score is above the screening threshold, discussing a routine lab test with your clinician is recommended."
-                    if is_flag
-                    else "your score remains below the screening cutoff, so routine preventive habits are appropriate."
+            if is_tech_q:
+                ans_m = f"{top['content']}"
+                ans_f = f"{top['tip']}"
+            else:
+                personal_link = (
+                    f"Connecting this to your profile (score <b>{prob_pct}</b> vs. cutoff <b>{th_str}</b>, BMI <b>{bmi_str}</b>): "
+                    + (
+                        "since your score is above the screening threshold, asking your clinician for a routine lab check is recommended."
+                        if is_flag
+                        else "your score remains below the screening cutoff, so routine healthy habits are great."
+                    )
                 )
-            )
-            ans_m = f"Grounded in {cite} (<i>{top['source']}</i>): {top['content']} {personal_link}"
-            ans_f = (
-                f"{top['tip']} Based on your current BMI of <b>{bmi_str}</b>, moving toward <b>{lower_bmi_str}</b> would adjust your estimated score to <b>{whatif_pct}</b>!{extra_fact}"
-            )
+                ans_m = f"{top['content']} {personal_link}"
+                ans_f = (
+                    f"{top['tip']} Based on your current BMI of <b>{bmi_str}</b>, moving toward <b>{lower_bmi_str}</b> would adjust your score to <b>{whatif_pct}</b>!"
+                )
             return ans_m, ans_f
 
     if web_context:
@@ -433,15 +437,15 @@ def run_hybrid_rag_ai(
     target_lang = lang_names.get(lang_key, "Vietnamese")
 
     system_prompt = (
-        f"You are a Clinical RAG Decision-Support Assistant roleplaying TWO specialists in {target_lang}:\n"
-        f"1) {doc_m_label}: Evidence-based, cites [KB-XX] when medical/project RAG chunks are relevant, connects to Patient Context.\n"
-        f"2) {doc_f_label}: Warm lifestyle & nutrition coach giving practical daily steps and referencing the patient's What-If BMI improvement.\n"
+        f"You are a warm, smart, natural-sounding Clinical Decision-Support Assistant roleplaying TWO specialists in {target_lang}:\n"
+        f"1) {doc_m_label}: Clear, friendly, accurate. Uses the verified clinical/project knowledge below silently to stay 100% factual without dumping ugly code tags like [KB-01] or raw cosine scores. Speaks in plain language for everyday users, and gives exact data-science details (BRFSS 253,680 rows, 7-feature selection, Recall/Precision/F1, RAG, Few-Shot, Cost & Traffic/Trial control) ONLY when the user asks about them.\n"
+        f"2) {doc_f_label}: Warm lifestyle & nutrition coach giving practical daily tips tailored to the user's BMI and What-If improvement.\n"
         f"If the user asks a general non-medical question (news, math, coding, daily life), answer it directly and accurately without forcing diabetes into it.\n\n"
         f"{FEW_SHOT_EXAMPLES}\n\n"
         f"[Live Patient Context]\n{patient_summary}\n\n"
-        f"[Retrieved Verified RAG Evidence]\n{rag_block if rag_block else 'None'}\n"
+        f"[Background Verified Knowledge]\n{rag_block if rag_block else 'None'}\n"
         + (f"\n[Live Web Context]\n{web_context}\n" if web_context else "")
-        + f"\nReturn EXACTLY two concise paragraphs in {target_lang} separated by '||SPLIT||' (no speaker prefixes)."
+        + f"\nReturn EXACTLY two concise, natural paragraphs in {target_lang} separated by '||SPLIT||' (no speaker prefixes, no [KB-XX] bracket codes)."
     )
 
     def _split_two(txt: str):

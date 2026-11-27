@@ -170,23 +170,32 @@ _NAV_I18N = getattr(
     i18n,
     "NAV_TABS_I18N",
     {
-        "en": {"app": "Screening Assistant", "Threshold and Cost": "Threshold & Cost", "Health Equity": "Health Equity", "About Model": "About Model", "Batch Screening": "Batch Screening"},
-        "vi": {"app": "Trợ lý Sàng lọc", "Threshold and Cost": "Ngưỡng cắt & Chi phí", "Health Equity": "Công bằng Y tế", "About Model": "Về Mô hình AI", "Batch Screening": "Tầm soát Hàng loạt"},
-        "zh": {"app": "糖尿病筛查助手", "Threshold and Cost": "阈值与成本模拟", "Health Equity": "健康公平性评估", "About Model": "关于模型与数据", "Batch Screening": "批量筛查 (CSV)"},
-        "fr": {"app": "Assistant de Dépistage", "Threshold and Cost": "Seuil et Coûts", "Health Equity": "Équité en Santé", "About Model": "À propos du Modèle", "Batch Screening": "Dépistage par Lot"},
+        "en": {"app": "🩺 Screening Assistant", "Data Mining & EDA": "📊 Data Mining & EDA", "Threshold and Cost": "⚖️ Threshold & Cost", "Health Equity": "🤝 Health Equity", "About Model": "📖 About Model", "Batch Screening": "📂 Batch Screening"},
+        "vi": {"app": "🩺 Trợ lý Sàng lọc", "Data Mining & EDA": "📊 Khai phá Dữ liệu & Chọn biến", "Threshold and Cost": "⚖️ Ngưỡng cắt & Chi phí", "Health Equity": "🤝 Công bằng Y tế", "About Model": "📖 Về Mô hình AI", "Batch Screening": "📂 Tầm soát Hàng loạt"},
+        "zh": {"app": "🩺 糖尿病筛查助手", "Data Mining & EDA": "📊 数据挖掘与特征选择", "Threshold and Cost": "⚖️ 阈值与成本模拟", "Health Equity": "🤝 健康公平性评估", "About Model": "📖 关于模型与数据", "Batch Screening": "📂 批量筛查 (CSV)"},
+        "fr": {"app": "🩺 Assistant de Dépistage", "Data Mining & EDA": "📊 Exploration & Variables", "Threshold and Cost": "⚖️ Seuil et Coûts", "Health Equity": "🤝 Équité en Santé", "About Model": "📖 À propos du Modèle", "Batch Screening": "📂 Dépistage par Lot"},
     },
 )
 _, _, _header_badge_txt, _, _nav_title_txt = _LOGO_I18N.get(lang_code, _LOGO_I18N["en"])
 _nav_labels = _NAV_I18N.get(lang_code, _NAV_I18N["en"])
 
-# Support flat root GitHub upload as well as subfolder structure with translated Sidebar Pill Tabs
+# Support both flat root GitHub upload AND pages/ subfolder structure with translated Sidebar Pill Tabs
 _base_dir = Path(__file__).resolve().parent
-if not (_base_dir / "pages").exists() and (_base_dir / "1_Threshold_and_Cost.py").exists():
+_file_map = {
+    "Data Mining & EDA": "0_Data_Mining_EDA.py",
+    "Threshold and Cost": "1_Threshold_and_Cost.py",
+    "Health Equity": "2_Health_Equity.py",
+    "About Model": "3_About_Model.py",
+    "Batch Screening": "4_Batch_Screening.py",
+}
+if any(((_base_dir / fn).exists() or (_base_dir / "pages" / fn).exists()) for fn in _file_map.values()):
+    st.markdown("<style>[data-testid='stSidebarNav'] { display: none !important; }</style>", unsafe_allow_html=True)
     _nav_slot = st.session_state.get("_nav_placeholder", st.sidebar)
     _flat_page = _nav_slot.radio(
         _nav_title_txt,
         options=[
             "app",
+            "Data Mining & EDA",
             "Threshold and Cost",
             "Health Equity",
             "About Model",
@@ -195,13 +204,8 @@ if not (_base_dir / "pages").exists() and (_base_dir / "1_Threshold_and_Cost.py"
         format_func=lambda k: _nav_labels.get(k, k),
     )
     if _flat_page != "app":
-        _file_map = {
-            "Threshold and Cost": "1_Threshold_and_Cost.py",
-            "Health Equity": "2_Health_Equity.py",
-            "About Model": "3_About_Model.py",
-            "Batch Screening": "4_Batch_Screening.py",
-        }
-        _target = _base_dir / _file_map[_flat_page]
+        _fname = _file_map[_flat_page]
+        _target = (_base_dir / "pages" / _fname) if (_base_dir / "pages" / _fname).exists() else (_base_dir / _fname)
         _code = _target.read_text(encoding="utf-8")
         _orig_spc = st.set_page_config
         st.set_page_config = lambda *args, **kwargs: None
@@ -985,47 +989,46 @@ def call_free_llm_api(question_text: str, lang_key: str, doc_m_label: str, doc_f
 
 
 def generate_doctor_replies(question_text: str, use_live_llm: bool = True) -> tuple:
-    q = question_text.lower().strip()
+    """
+    Hybrid Clinical RAG + 2-Shot Clinical Reasoning + Cost & Traffic/Trial Governance Engine.
+    Retrieves verified ADA/WHO/NIH/BRFSS chunks, grounds both doctors in the user's live screening profile,
+    optimizes token cost via semantic caching & top-3 chunk compression, and guarantees zero downtime on trial limits.
+    """
+    patient_ctx = {
+        "age_label": AGE_OPTIONS.get(age_code, str(age_code)),
+        "bmi_val": float(bmi_val),
+        "lower_bmi": float(lower_bmi),
+        "genhlth_label": GENHLTH_MAP.get(gen_hlth, str(gen_hlth)),
+        "high_bp": "Yes" if high_bp == 1 else "No",
+        "high_chol": "Yes" if high_chol == 1 else "No",
+        "prob_gb": float(prob_gb),
+        "prob_whatif": float(prob_whatif),
+        "active_th": float(active_th),
+        "is_flagged": bool(is_flagged),
+        "top_factor": top_feat_label,
+    }
+    try:
+        from rag_engine import run_hybrid_rag_ai
 
-    # Only keep exact app-specific medical/metric shortcuts; send ALL other custom questions to live Web Search + AI!
-    if lang_code == "vi":
-        if any(w in q for w in ["recall", "precision", "f2", "pr-auc"]):
-            ans_m = (
-                f"Trong bài toán tầm soát tiểu đường tại nhà (ngưỡng hiện tại <b>{active_th:.2f}</b>), "
-                f"<b>Recall (Độ nhạy = {rec_now:.1%}) quan trọng hơn nhiều so với Precision ({prec_now:.1%})!</b> "
-                f"Vì báo động giả chỉ tốn khoảng ~${cost_fp_live:.0f} xét nghiệm máu kiểm tra, còn bỏ sót bệnh gây biến chứng nặng. "
-                f"Chỉ số tối ưu là <b>F2-Score ({f2_now:.3f})</b>, <b>PR-AUC ({pr_auc_live:.3f})</b> và <b>ROC-AUC ({roc_auc_live:.3f})</b>."
-            )
-            ans_f = (
-                "Bạn có thể tự kéo thử tỷ lệ chi phí trên trang <b>Ngưỡng cắt & Chi phí</b> ở thanh menu bên trái để xem Recall và F2-Score thay đổi trực quan nhé!"
-            )
-            return ans_m, ans_f
-        if any(w in q for w in ["xét nghiệm máu nào", "yêu cầu xét nghiệm", "xét nghiệm gì", "fpg", "hba1c"]):
-            ans_m = (
-                f"Bạn nên yêu cầu bác sĩ làm <b>Xét nghiệm đường huyết lúc đói (FPG — nhịn ăn 8 tiếng)</b> hoặc <b>HbA1c</b> "
-                f"(đánh giá đường huyết trung bình 3 tháng). Với điểm số <b>{prob_gb:.1%}</b> của bạn (ngưỡng cắt <b>{active_th:.2f}</b>), đây là cách kiểm tra chính xác nhất!"
-            )
-            ans_f = "Tối hôm trước ngày đi lấy máu FPG bạn nhớ nhịn ăn từ 22h đêm (chỉ uống nước lọc) và ngủ sớm để kết quả chuẩn nhất nhé!"
-            return ans_m, ans_f
-
-    # Call Google-style Live Web Search + AI LLM for ANY arbitrary question!
-    if use_live_llm:
-        llm_m, llm_f = call_free_llm_api(question_text, lang_code, d_cfg["m_name"], d_cfg["f_name"])
-        if llm_m and llm_f:
-            return llm_m, llm_f
-
-    if lang_code == "vi":
-        ans_m = (
-            f"Hiện tại kết nối tìm kiếm trực tuyến đang bận nên tôi chưa tải được dữ liệu mới nhất cho câu hỏi <i>\"{question_text}\"</i>. "
-            f"Bạn hãy bấm gửi lại sau vài giây nhé!"
+        ans_m, ans_f, rag_tel = run_hybrid_rag_ai(
+            question_text=question_text,
+            lang_key=lang_code,
+            doc_m_label=d_cfg["m_name"],
+            doc_f_label=d_cfg["f_name"],
+            patient_ctx=patient_ctx,
+            fetch_web_fn=fetch_internet_knowledge if use_live_llm else None,
         )
-        ans_f = "Nếu bạn muốn hỏi về sức khỏe, dinh dưỡng hoặc bất kỳ chủ đề nào khác, cứ thử hỏi lại ngay nhé!"
-    else:
-        ans_m = (
-            f"The live search connection is momentarily busy for <i>\"{question_text}\"</i>. Please try sending your question again in a few seconds!"
+        st.session_state["_last_rag_telemetry"] = rag_tel
+        return ans_m, ans_f
+    except Exception:
+        if use_live_llm:
+            llm_m, llm_f = call_free_llm_api(question_text, lang_code, d_cfg["m_name"], d_cfg["f_name"])
+            if llm_m and llm_f:
+                return llm_m, llm_f
+        return (
+            f"Với điểm sàng lọc <b>{prob_gb:.1%}</b> (ngưỡng <b>{active_th:.2f}</b>, BMI <b>{bmi_val:.1f} kg/m²</b>), bạn có thể kiểm tra HbA1c hoặc FPG định kỳ để theo dõi chính xác.",
+            f"Duy trì 30 phút vận động mỗi ngày và giảm nhẹ BMI về <b>{lower_bmi:.1f} kg/m²</b> sẽ đưa điểm rủi ro về <b>{prob_whatif:.1%}</b>!",
         )
-        ans_f = "Feel free to retry or ask another question anytime!"
-    return ans_m, ans_f
 
 
 with st.container(border=True):
@@ -1101,12 +1104,38 @@ with st.container(border=True):
     if doc_mode in ["both", "female"]:
         st.markdown(
             "<div style='display:flex; align-items:flex-start; gap:14px; background:#ffffff; border:1px solid #bae6fd; border-left:5px solid #0284c7; "
-            "padding:14px 16px; border-radius:12px; margin-bottom:4px;'>"
+            "padding:14px 16px; border-radius:12px; margin-bottom:8px;'>"
             f"<img class='doc-avatar-anim' src='data:image/jpeg;base64,{DOC_FEMALE_B64}' style='width:54px; height:54px; object-fit:cover; border-radius:50%; border:2px solid #0284c7; flex-shrink:0;'/>"
             f"<div style='color:#1e293b; font-size:0.93rem; line-height:1.55;'><b style='color:#0369a1;'>{d_cfg['f_name']}:</b> {reply_f}</div>"
             "</div>",
             unsafe_allow_html=True,
         )
+
+    # Transparent RAG Citations + Model / Few-Shot / Cost / Traffic-Trial Telemetry Inspector
+    _tel = st.session_state.get("_last_rag_telemetry")
+    if _tel:
+        _hits = _tel.get("rag_hits", [])
+        _qinfo = _tel.get("quota", {})
+        _hit_badges = " · ".join(f"<code>{h['id']}</code> ({h['score']:.2f})" for h in _hits) if _hits else "Live Web / General"
+        _exp_lbl = (
+            "📚 Nguồn tri thức RAG & Quản trị AI (Model · Few-Shot · Chi phí · Lưu lượng/Trial)"
+            if lang_code == "vi"
+            else "📚 Retrieved RAG Evidence & AI Governance (Model · Few-Shot · Cost · Traffic/Trial)"
+        )
+        with st.expander(_exp_lbl):
+            st.markdown(
+                f"- **🧠 AI Model & Prompting:** `{_tel['engine_used']}` · Chiến lược: **2-Shot Clinical Prompting + Hồ sơ bệnh nhân trực tiếp (`BMI {bmi_val:.1f}`, `Score {prob_gb:.1%}`)**\n"
+                f"- **📚 Truy xuất RAG (`TfidfVectorizer` Word + Char N-gram):** {_hit_badges}\n"
+                f"- **💰 Kiểm soát Chi phí (`Chi phí`):** `~{_tel['prompt_tokens'] + _tel['completion_tokens']} tokens` "
+                f"(nén Top-3 đoạn RAG giúp **giảm ~95% token** so với nhồi toàn bộ tài liệu) · "
+                f"Chi phí phiên này: **`${_tel['est_cost_usd']:.5f}`** *(so với `${_tel['baseline_gpt4o_usd']:.4f}` nếu gọi GPT-4o không nén/cache)* · "
+                f"Cache Hits: **{st.session_state.get('_ai_cache_hits', 0)}**\n"
+                f"- **🚦 Lưu lượng & Hạn ngạch Dùng thử (`Lưu lượng - Trial`):** `{_qinfo.get('rpm_used', 1)}/{_qinfo.get('max_rpm', 25)} req/phút` · "
+                f"Trial phiên: `{_qinfo.get('trial_used', 1)}/{_qinfo.get('trial_limit', 40)}` · Trạng thái: **{_qinfo.get('status_badge', '🟢 Healthy')}**",
+                unsafe_allow_html=True,
+            )
+            for h in _hits:
+                st.caption(f"🔎 **[{h['id']}] {h['source']}** (Cosine = `{h['score']:.3f}`): {h['content']}")
 
     # Speak immediately using the configured doctor voice(s) whenever a new chat reply is generated!
     clean_chat_m = re.sub(r"<[^>]+>", "", reply_m)

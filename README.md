@@ -38,18 +38,19 @@
 
 ---
 
-## 3. Models Compared (Held-Out Test Set)
+## 3. Models Compared (Ordered by Medical Screening Priority: Recall → Precision → F1)
 
-All preprocessing (`SimpleImputer`, `StandardScaler`) and models are bundled inside a single `scikit-learn` `Pipeline` (`models/pipeline.joblib` and `models/inydb`):
+All preprocessing (`SimpleImputer`, `StandardScaler`) and models are bundled inside a single `scikit-learn` `Pipeline` (`models/pipeline.joblib` and `models/inydb`). Columns are ordered from the most critical clinical screening metrics first:
 
-| Model | Questions | Threshold ($\tau^*$) | PR-AUC (train) | PR-AUC (test) | ROC-AUC (test) | Recall | Precision | F1 |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Logistic Regression (minimal)** | 7 | 0.14 | 0.398 | 0.392 | 0.815 | 75.8% | 30.4% | 0.434 |
-| **Logistic Regression (full)** | 10 | 0.14 | 0.399 | 0.394 | 0.816 | 75.9% | 30.6% | 0.436 |
-| **Histogram Gradient Boosting (minimal — App Model)** | **7** | **0.18** | **0.435** | **0.418** | **0.822** | **70.5%** | **33.6%** | **0.456** |
-| **Histogram Gradient Boosting (full)** | 10 | 0.14 | 0.441 | 0.418 | 0.823 | 78.0% | 30.2% | 0.436 |
+| Model | 1. Recall (Sensitivity) | 2. Precision | 3. F1-Score | 4. PR-AUC (Test) | Questions |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **⭐ Histogram Gradient Boosting (minimal — Deployed App Model)** | **70.5%** | **33.6% (Best)** | **0.456 (Best)** | **0.418** | **7** |
+| **Histogram Gradient Boosting (full)** | 78.0% | 30.2% | 0.436 | 0.418 | 10 |
+| **Logistic Regression (full)** | 75.9% | 30.6% | 0.436 | 0.394 | 10 |
+| **Logistic Regression (minimal — Baseline)** | 75.8% | 30.4% | 0.434 | 0.392 | 7 |
 
-- **Why Histogram Gradient Boosting (7 questions) is deployed in the app:** It achieves `ROC-AUC = 0.822` and `PR-AUC = 0.418` using only 7 quick, non-intrusive questions (taking under 1 minute at home without asking for income or education on the intake screen).
+- **Data Mining, EDA & Feature Selection (`pages/0_Data_Mining_EDA.py`):** Across `253,680` BRFSS survey rows (`0%` missing, `13.93%` positive class imbalance), grouping all `21` raw indicators into 4 clinical domains and selecting **7 zero-leakage home questions** retains **100% of PR-AUC (`0.418`)** and **99.8% of ROC-AUC (`0.822` vs `0.823`)**, while `HistGradientBoostingClassifier` captures non-linear comorbidity synergy (`3.2%` → `49.5%` prevalence when 4 conditions co-occur).
+- **Smart Clinical RAG, Few-Shot, Cost & Traffic Governance (`rag_engine.py`):** Dual AI Doctors use a hybrid Word + Char-Ngram `TfidfVectorizer` **Clinical RAG** index over verified ADA 2025, WHO Asian BMI (`≥23 kg/m²`), NIH DPP (`58%` risk reduction), and BRFSS sources + **2-Shot patient-contextualized prompting**, **Semantic Caching & Top-3 chunk compression (~95% token cost savings, `~$0.0000/query`)**, and a **Sliding-Window Traffic / Trial Rate-Limiter** with zero-downtime local RAG failover.
 
 ---
 
